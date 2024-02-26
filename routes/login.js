@@ -113,12 +113,12 @@ app.post('/auth/google', async (req, res) => {
   }
 });
 
-  // loginRouter.post("/login", async (req, res) => {
-  //   const { userId, password }= req.body;
-  //   // Validate data
-  //   if (!userId || !password) {
-  //     return res.status(400).send("Missing user ID or password");
-  //   }
+  loginRouter.post("/login", async (req, res) => {
+    const { userId, password }= req.body;
+    // Validate data
+    if (!userId || !password) {
+      return res.status(400).send("Missing user ID or password");
+    }
   
   //   // Check if user exists and password is correct
   //   try {
@@ -140,6 +140,6 @@ app.post('/auth/google', async (req, res) => {
   //     console.error("Error during login:", error);
   //     res.status(500).send("Error during login");
   //   }
-  // });
+    });
 
   module.exports = loginRouter;
