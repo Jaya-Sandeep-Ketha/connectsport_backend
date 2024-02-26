@@ -52,6 +52,8 @@ const register = async (req, res) => {
     }
 };
 
+
+
 const login = async (req, res) => {
     const { userId, password }= req.body;
     // Validate data
