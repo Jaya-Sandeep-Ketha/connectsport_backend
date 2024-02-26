@@ -3,17 +3,11 @@ const express = require("express");
 const nodemailer = require("nodemailer");
 const speakeasy = require("speakeasy");
 const userModel = require("../model/User"); 
-// const session = require("express-session");
+const crypto = require("crypto");
 
 const forgetPasswordRouter = express.Router(); 
 
 
-// Use the express-session middleware
-// forgetPasswordRouter.use(session({
-//     secret: 'secret-key',
-//     resave: false,
-//     saveUninitialized: true
-//   }));
 
 forgetPasswordRouter.post("/verify-user", async (req, res) => {
     const { email } = req.body;
@@ -24,41 +18,75 @@ forgetPasswordRouter.post("/verify-user", async (req, res) => {
     if (!user) {
       return res.status(400).json({ message: "No user found with this email." });
     }
-    // Store the email in the session
-    req.session.email = email;
-    console.log("Email stored in session:", req.session.email);
-    res.json({ message: "User found" });
+    const token = crypto.randomBytes(20).toString('hex');
+    user.passwordResetToken = token;
+    user.passwordResetExpires = Date.now() + 3600000; // 1 hour
+    await user.save();
+    res.json({ message: "User found" ,token: token});
 });
+
+
+
 
 
 forgetPasswordRouter.get("/api/security-questions/" , async (req, res) => {
-
-    console.log("===== Session email:", req.session.email);
-    const email = req.session.email;
-    console.log("===== Query email:", email);
-    const user = await userModel.findOne({email:email});
-    console.log("===== User found:", user);
-    res.json({ securityQuestion1: user.securityQuestion1, securityQuestion2: user.securityQuestion2 });
-});
-
-forgetPasswordRouter.post("/api/verify-answers", async (req, res) => {
-    const security = req.body;
-    const email = req.session.email;
-    const user = await userModel.findOne({email:email});
-
-    if(security.securityAnswer1 === user.securityAnswer1 && security.securityAnswer2 === user.securityAnswer2){ 
-        res.json({ message: "Security questions verified" });
-    } else {
-        res.status(400).json({ message: "Security questions not verified" });
+    const { token } = req.query;
+    console.log("Token received:", token);
+    const user = await userModel.findOne({
+      passwordResetToken: token,
+      passwordResetExpires: { $gt: Date.now() },
+    });
+    console.log("User found:", user);
+    if (!user) {
+      return res.status(400).json({ message: "Invalid or expired token." });
     }
 
-    // Generate a one-time password (OTP)
-  const secret = speakeasy.generateSecret({ length: 20 });
-  const otp = speakeasy.totp({ secret: secret.base32, encoding: "base32" });
+    const response = { 
+      message: "Token verified.",
+      questions: {
+        question1: user.securityQuestions[0].question, 
+        question2: user.securityQuestions[1].question
+      } 
+    };
 
-  // Store the OTP in the user's document for later verification
-  user.otp = otp;
-  await user.save();
+    console.log("Response:", response);
+
+    res.json(response);
+});
+
+
+
+
+
+forgetPasswordRouter.post("/api/verify-answers", async (req, res) => {
+    const { token, answers } = req.body;
+    console.log("==========Answers received:", answers);
+    console.log("Token received:", token);
+    const user = await userModel.findOne({
+      passwordResetToken: token,
+      passwordResetExpires: { $gt: Date.now() }
+  });
+  console.log("User found:", user);
+
+  if (!user) {
+    return res.status(400).json({ message: "Invalid or expired token." });
+}
+
+const verifyAnswers = user.securityQuestions.every((q, index) => {
+  return q.answer === answers[index];
+});
+
+if (!verifyAnswers) {
+    return res.status(400).json({ message: "Incorrect answers." });
+}
+
+// Generate a one-time password (OTP)
+const secret = speakeasy.generateSecret({ length: 20 });
+const otp = speakeasy.totp({ secret: secret.base32, encoding: "base32" });
+
+// Store the OTP in the user's document for later verification
+user.otp = otp;
+await user.save();
 
   // Send the OTP to the user's email
   const transporter = nodemailer.createTransport({
@@ -86,12 +114,18 @@ forgetPasswordRouter.post("/api/verify-answers", async (req, res) => {
   res.json({ message: "OTP sent to your email." });
 });
 
-forgetPasswordRouter.post("/api/verify-otp", async (req, res) => {
-  const { otp } = req.body;
-  const email = req.session.email;
 
-  // Find the user with the provided email
-  const user = await userModel.findOne({email:email});
+
+
+forgetPasswordRouter.post("/api/verify-otp", async (req, res) => {
+  const { token, otp } = req.body;
+  
+
+  // Find the user with the provided token
+  const user = await userModel.findOne({
+    passwordResetToken: token,
+    passwordResetExpires: { $gt: Date.now() }
+});
 
   if (!user) {
     return res.status(400).json({ message: "No user found with this email." });
@@ -105,15 +139,23 @@ forgetPasswordRouter.post("/api/verify-otp", async (req, res) => {
 
   res.json({ message: "OTP verified" });
 });
+
+
+
+
+
 forgetPasswordRouter.post("/api/change-password", async (req, res) => {
-    const { newPassword } = req.body;
-    const email = req.session.email;
-    
-    // Find the user with the provided email
-    const user = await userModel.findOne({email:email});
+    const { token, newPassword } = req.body;
+    const user = await userModel.findOne({
+      passwordResetToken: token,
+      passwordResetExpires: { $gt: Date.now() }
+  });
     // Set the new password
     user.password = newPassword;
     await user.save();
+    // Clear the token
+    user.passwordResetToken = null;
+    user.passwordResetExpires = null;
     res.json({ message: "Password changed successfully" });
 });
 

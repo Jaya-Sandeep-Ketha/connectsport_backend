@@ -14,11 +14,8 @@
     "dotenv": "^16.4.4",
     "email-validator": "^2.0.4",
     "express": "^4.18.2",
-<<<<<<< HEAD
     "google-auth-library": "^9.6.3",
-=======
     "express-session": "^1.18.0",
->>>>>>> ce9b6b34ba2416919dc13c93b56b717f71ebd5d7
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.1.3",
     "nodemailer": "^6.9.10",
