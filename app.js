@@ -5,6 +5,7 @@ const cors = require("cors");
 const bodyParser = require("body-parser");
 const loginRouter = require('./routes/login');
 const forgetPasswordRouter = require("./routes/forgetPassword");
+const homepageRouter = require("./routes/homepage")
 const userModel = require("./model/User"); 
 
 
@@ -36,7 +37,7 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use("/", loginRouter);
 app.use("/", forgetPasswordRouter);
-
+app.use("/", homepageRouter);
 
 app.get("/", (req, res) => {
   res.send("Hello World");
