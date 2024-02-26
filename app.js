@@ -7,6 +7,9 @@ const jwt = require('jsonwebtoken');
 const cors = require("cors");
 const bodyParser = require("body-parser");
 const emailValidator = require("email-validator");
+const { OAuth2Client } = require('google-auth-library');
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID; // You should add this to your .env
+const client = new OAuth2Client(GOOGLE_CLIENT_ID);
 
 const app = express();
 // console.log(process.env.MONGODB_URI); // Remove after testing
@@ -94,6 +97,59 @@ app.post("/register", async (req, res) => {
     res.status(500).send("Registration failed");
   }
 });
+
+
+// ... existing code ...
+
+// Google authentication endpoint
+app.post('/auth/google', async (req, res) => {
+  const { token } = req.body;
+
+  // Verify Google token
+  async function verify() {
+    const ticket = await client.verifyIdToken({
+      idToken: token,
+      audience: GOOGLE_CLIENT_ID,
+    });
+    const payload = ticket.getPayload();
+    return payload;
+  }
+
+  try {
+    const payload = await verify();
+
+    // Check if the user already exists
+    let user = await User.findOne({ email: payload.email });
+    if (!user) {
+      // Create a new user if not exists
+      user = new User({
+        firstName: payload.given_name,
+        lastName: payload.family_name,
+        email: payload.email,
+        // Add other user fields if necessary
+      });
+      await user.save();
+    }
+
+    // Generate JWT token for the user
+    const jwtToken = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, {
+      expiresIn: "24h",
+    });
+
+    // Respond with JWT token and user information
+    res.json({
+      token: jwtToken,
+      userId: user._id,
+      email: user.email,
+      name: user.firstName + ' ' + user.lastName
+      // Include other user info if needed
+    });
+  } catch (error) {
+    console.error('Error verifying Google token:', error);
+    res.status(500).send('Authentication failed');
+  }
+});
+
 
 app.post("/login", async (req, res) => {
   const { userId, password } = req.body;
