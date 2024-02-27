@@ -37,7 +37,7 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use("/", loginRouter);
 app.use("/", forgetPasswordRouter);
-app.use("/", homepageRouter);
+//app.use("/", homepageRouter);
 
 app.get("/", (req, res) => {
   res.send("Hello World");

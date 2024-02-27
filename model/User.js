@@ -21,7 +21,10 @@ const userSchema = new mongoose.Schema({
     ],
     passwordResetToken: String,
     passwordResetExpires: Date,
-    otp: String,
+    otp: {
+      type: String,
+      default: null
+    },
   },
   { collection: "users"}
   );
@@ -35,4 +38,7 @@ userSchema.pre('save', function(next) {
     next();
   });
 });
+
+
+
 module.exports = mongoose.model("users", userSchema);

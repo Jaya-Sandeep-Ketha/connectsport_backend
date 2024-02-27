@@ -1,8 +1,7 @@
-const loginModel = require('../model/User');
-const bcrypt = require("bcrypt");
+const UserModel = require('../model/User');
 const jwt = require('jsonwebtoken');
-const saltRounds = 10;
 const emailValidator = require("email-validator");
+const bcrypt = require('bcrypt');
 
 const register = async (req, res) => {
     const userData = req.body;
@@ -23,27 +22,34 @@ const register = async (req, res) => {
     ){
       return res.status(400).send("Missing Details");
     }
+    // Restructure security questions
+  userData.securityQuestions = [
+    { question: userData.securityQuestion1, answer: userData.securityAnswer1 },
+    { question: userData.securityQuestion2, answer: userData.securityAnswer2 }
+  ];
+  delete userData.securityQuestion1;
+  delete userData.securityAnswer1;  
+  delete userData.securityQuestion2;
+  delete userData.securityAnswer2;
+
     // Validate email format
     if (!emailValidator.validate(userData.email)) {
       return res.status(400).send("Invalid email format");
     }
   
     // Check if email is already registered
-    const emailExists = await loginModel.exists({ email: userData.email });
+    const emailExists = await UserModel.exists({ email: userData.email });
     if (emailExists) {
       return res.status(400).send("Email already registered");
     }
     // Check if username is already registered
-    const usernameExists = await loginModel.exists({ userId: userData.userId });
+    const usernameExists = await UserModel.exists({ userId: userData.userId });
     if (usernameExists) {
       return res.status(400).send("Username not available");
     }
-    // Hash password
-    const hashedPassword = await bcrypt.hash(userData.password, saltRounds);
-    userData.password = hashedPassword;
     // Save user to database
     try {
-      const user = new loginModel(userData);
+      const user = new UserModel(userData);
       await user.save();
       res.status(200).send("User registered successfully");
     } catch (error) {
@@ -63,7 +69,7 @@ const login = async (req, res) => {
   
     // Check if user exists and password is correct
     try {
-      const user = await loginModel.findOne({ userId: userId });
+      const user = await UserModel.findOne({ userId: userId });
       if (!user) {
         return res.status(400).send("User not found");
       }
