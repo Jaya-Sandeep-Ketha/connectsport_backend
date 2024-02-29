@@ -89,7 +89,36 @@ const login = async (req, res) => {
     }
 };
 
+
+
+// Add the googleAuth function
+const googleAuth = async (req, res) => {
+  const { email, name, providerId } = req.body;
+
+  // Check if user exists
+  let user = await UserModel.findOne({ email: email });
+
+  if (!user) {
+    // If user does not exist, create a new user
+    user = new UserModel({
+      email: email,
+      userId: name, // You might want to generate a unique userId here
+      providerId: providerId,
+      // Add other necessary fields
+    });
+    await user.save();
+  }
+
+  // JWT token creation
+  const token = jwt.sign({ userId: user.userId }, process.env.JWT_SECRET, {
+    expiresIn: "24h",
+  });
+
+  res.json({ message: "Login successful", token, userId: user.userId });
+};
+
 module.exports = {
-    login,
-    register,
+  login,
+  register,
+  googleAuth, 
 };
