@@ -13,5 +13,5 @@ jobs:
             - name: Build and push the image
               run: |
                 docker login --username jayasandeepketha --password ${{secrets.ACCESS_TOKEN}} ghcr.io
-                docker build -t ghcr.io/jayasandeepketha/arithmetic-service:latest --file Dockerfile .  
-                docker push ghcr.io/jayasandeepketha/arithmetic-service:latest  
+                docker build -t ghcr.io/jayasandeepketha/connectsport_backend:latest --file Dockerfile .  
+                docker push ghcr.io/jayasandeepketha/connectsport_backend:latest  
