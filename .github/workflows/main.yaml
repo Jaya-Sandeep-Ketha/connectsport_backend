@@ -12,6 +12,7 @@ jobs:
               run: npm ci
             - name: Build and push the image
               run: |
-                docker login --username jayasandeepketha --password ${{secrets.ACCESS_TOKEN}} ghcr.io
-                docker build -t ghcr.io/jayasandeepketha/connectsport_backend:latest --file Dockerfile .  
-                docker push ghcr.io/jayasandeepketha/connectsport_backend:latest  
+                echo ${{secrets.ACCESS_TOKEN}} | docker login ghcr.io --username jayasandeepketha --password-stdin
+                docker build -t ghcr.io/jayasandeepketha/connectsport_backend:latest --file Dockerfile .
+                docker push ghcr.io/jayasandeepketha/connectsport_backend:latest
+ 
