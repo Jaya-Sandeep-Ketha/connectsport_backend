@@ -161,7 +161,7 @@ const crypto = require("crypto");
       return res.status(400).json({ message: "Invalid OTP." });
     }
   
-    res.json({ message: "OTP verified" });
+    res.json({ success: true, message: "OTP verified" });
   };
 
 
