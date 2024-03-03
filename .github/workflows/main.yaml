@@ -1,0 +1,17 @@
+name: Docker Image CI for GHCR
+
+on:
+    push
+
+jobs:
+    build_and_publish:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v3
+            - name: npm install
+              run: npm ci
+            - name: Build and push the image
+              run: |
+                echo ${{secrets.ACCESS_TOKEN}} | docker login ghcr.io --username Jaya-Sandeep-Ketha --password-stdin
+                docker build -t ghcr.io/jaya-sandeep-ketha/connectsport_backend:latest --file Dockerfile .  
+                docker push ghcr.io/jaya-sandeep-ketha/connectsport_backend:latest
