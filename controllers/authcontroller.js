@@ -89,8 +89,6 @@ const login = async (req, res) => {
     }
 };
 
-
-
 // Add the googleAuth function
 const googleAuth = async (req, res) => {
   const { email, name, providerId } = req.body;
@@ -117,8 +115,38 @@ const googleAuth = async (req, res) => {
   res.json({ message: "Login successful", token, userId: user.userId });
 };
 
+const facebookAuth = async (req, res) => {
+  try {
+    const { email, name, providerId } = req.body;
+
+    // Check if user exists
+    let user = await UserModel.findOne({ email: email });
+
+    if (!user) {
+      user = new UserModel({
+        email: email,
+        userId: name, // Consider ensuring userId uniqueness or using email
+        providerId: providerId,
+        // Add other necessary fields
+      });
+      await user.save();
+    }
+
+    // JWT token creation
+    const token = jwt.sign({ userId: user.userId }, process.env.JWT_SECRET, {
+      expiresIn: "24h",
+    });
+
+    res.json({ message: "Login successful", token, userId: user.userId });
+  } catch (error) {
+    console.error("Error during Facebook authentication:", error);
+    res.status(500).send("Authentication failed due to server error");
+  }
+};
+
 module.exports = {
   login,
   register,
-  googleAuth, 
+  googleAuth,
+  facebookAuth,
 };
