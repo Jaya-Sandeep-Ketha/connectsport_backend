@@ -19,6 +19,8 @@ const userSchema = new mongoose.Schema({
         answer: String
       }
     ],
+    bio: { type: String, default: '' },
+    emailPublic: { type: Boolean, default: false },
     passwordResetToken: String,
     passwordResetExpires: Date,
     otp: {

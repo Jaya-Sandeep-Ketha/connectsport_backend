@@ -4,36 +4,6 @@ const User = require("../model/User"); // Adjust the path as necessary
 
 const settings = express.Router();
 
-useEffect(() => {
-    if (isLoggedIn && currentUser) {
-      const fetchUserDetails = async () => {
-        const response = await fetch(`${process.env.REACT_APP_API_URL}/${currentUser}/settings`, {
-          method: 'GET', // No body needed for GET request
-          headers: {
-            'Content-Type': 'application/json',
-            // Authorization: `Bearer ${token}`, // If using tokens
-          },
-        });
-        const data = await response.json();
-        if (response.ok) {
-          setProfile({
-            userId: currentUser || "",
-            bio: data.bio || "",
-            email: data.email || "",
-          });
-        } else {
-          console.error("Failed to fetch user details:", data.message);
-          setError(data.message || "Failed to fetch user details");
-        }
-        setLoading(false);
-      };
-  
-      fetchUserDetails();
-    } else {
-      navigate("/login");
-    }
-  }, [isLoggedIn, currentUser, navigate]);
-
 // Fetch user details
 settings.get("/:userId/settings", async (req, res) => {
   try {
