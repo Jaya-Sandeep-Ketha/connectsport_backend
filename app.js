@@ -8,6 +8,8 @@ const forgetPasswordRouter = require("./routes/forgetPassword");
 const homepageRouter = require("./routes/homepage")
 const userModel = require("./model/User"); 
 const settings = require("./routes/settings");
+const networkRoutes = require('./routes/networkRoutes');
+const messagingRoutes = require('./routes/messageRoutes');
 
 
 const app = express();
@@ -40,6 +42,7 @@ app.use("/", loginRouter);
 app.use("/", forgetPasswordRouter);
 app.use("/", homepageRouter);
 app.use("/", settings);
-
+app.use("/", messagingRoutes);
+app.use("/", networkRoutes);
 
 app.listen(3000, () => console.log("Server is running on port 3000"));
