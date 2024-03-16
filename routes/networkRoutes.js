@@ -1,26 +1,48 @@
 const express = require('express');
-const Network = require('../model/Network'); // Path to your Network model
+const Message = require('../model/Message'); // Ensure this path correctly points to your Message model
+const Network = require('../model/Network'); // Ensure this path correctly points to your Network model
 const router = express.Router();
 
 router.get('/friends/:userId', async (req, res) => {
     const { userId } = req.params;
 
-    // Log the userId received in the request
-    console.log(`Fetching friends for userId: ${userId}`);
+    const getLastMessages = async (userId) => {
+        // Your aggregation function remains the same
+        return Message.aggregate([
+            { $match: { $or: [{ senderId: userId }, { receiverId: userId }] } },
+            { $sort: { timestamp: -1 } },
+            { $group: { _id: { $cond: [{ $eq: ["$senderId", userId] }, "$receiverId", "$senderId"] }, lastMessage: { $first: "$$ROOT" } } }
+        ]);
+    };
 
     try {
-        // Use the userId to find the network information directly
         console.log(`Fetching network information for user ID: ${userId}`);
-        const network = await Network.findOne({ userId: userId }).populate('friends');
+        const network = await Network.findOne({ userId }).populate('friends');
+        console.log('Network:', network);
+
         if (!network) {
-            console.log('Network information not found for userId:', userId);
             return res.status(404).send('Network information not found');
         }
 
-        // Log the number of friends found (assuming network.friends is an array)
-        console.log(`Found ${network.friends.length} friends for userId: ${userId}`);
+        const lastMessages = await getLastMessages(userId);
+        console.log('Last messages:', lastMessages);
 
-        res.json(network.friends);
+        const friendsWithLastMessage = network.friends.map(friend => {
+            // Ensure 'friend' is treated as an object; remove any '.toObject()' usage if 'friend' is not a Mongoose document
+            const friendData = friend; // Assume 'friend' is already a proper object; adjust based on your actual data structure
+            console.log(friend);
+            const correspondingMessage = lastMessages.find(msg => msg._id === (friendData ? friendData : ''));
+            console.log(`Processing friend: ${friendData} with corresponding message:`, correspondingMessage);
+
+            // Correct object construction
+            return {
+                userId: friendData,
+                lastMessage: correspondingMessage ? correspondingMessage.lastMessage : null
+            };
+        });
+
+        console.log('Friends with last message:', friendsWithLastMessage);
+        res.json(friendsWithLastMessage);
     } catch (error) {
         console.error('Error fetching friends for userId:', userId, error);
         res.status(500).send('Internal server error');
