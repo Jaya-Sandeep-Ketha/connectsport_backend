@@ -16,36 +16,68 @@ router.post('/groups', async (req, res) => {
     }
 });
 
-// Add a user to a group
-router.patch('/groups/:groupName/addUser', async (req, res) => {
-    const { groupName } = req.params;
+// Fetch members of a group by group name
+router.get('/groups/:groupId/members', async (req, res) => {
+    const { groupId } = req.params;
+
+    try {
+        const group = await Group.findOne({ name: groupId });
+        if (!group) {
+            return res.status(404).send('Group not found');
+        }
+
+        // Assuming the 'members' field in your group document is an array of user IDs
+        // Here, we directly return this array. If you need to fetch user details, additional steps are required.
+        res.json(group.members);
+    } catch (error) {
+        console.error('Error fetching group members by name:', error);
+        res.status(500).send('Internal server error');
+    }
+});
+
+
+// Adjusted to use POST for adding a user to a group, matching frontend expectations
+router.post('/groups/:groupId/addMember', async (req, res) => {
+    const { groupId } = req.params;
     const { userId } = req.body;
 
     try {
-        const updatedGroup = await Group.findOneAndUpdate(
-            { name: groupName },
-            { $addToSet: { members: userId } },
-            { new: true }
-        );
-        res.json(updatedGroup);
+        const group = await Group.findById(groupId);
+        if (!group) {
+            return res.status(404).send('Group not found');
+        }
+
+        if (group.members.includes(userId)) {
+            return res.status(400).send('User already a member of the group');
+        }
+
+        group.members.push(userId);
+        await group.save();
+        res.json(group);
     } catch (error) {
         console.error('Error adding user to group:', error);
         res.status(500).send('Internal server error');
     }
 });
 
-// Remove a user from a group
-router.patch('/groups/:groupName/removeUser', async (req, res) => {
-    const { groupName } = req.params;
+// Adjusted to use POST for removing a user from a group, matching frontend expectations
+router.post('/groups/:groupId/removeMember', async (req, res) => {
+    const { groupId } = req.params;
     const { userId } = req.body;
 
     try {
-        const updatedGroup = await Group.findOneAndUpdate(
-            { name: groupName },
-            { $pull: { members: userId } },
-            { new: true }
-        );
-        res.json(updatedGroup);
+        const group = await Group.findById(groupId);
+        if (!group) {
+            return res.status(404).send('Group not found');
+        }
+
+        if (!group.members.includes(userId)) {
+            return res.status(400).send('User not a member of the group');
+        }
+
+        group.members = group.members.filter(member => member !== userId);
+        await group.save();
+        res.json(group);
     } catch (error) {
         console.error('Error removing user from group:', error);
         res.status(500).send('Internal server error');
