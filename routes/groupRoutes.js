@@ -1,6 +1,7 @@
 const express = require('express');
 const Group = require('../model/group');
 const Message = require('../model/Message');
+const Network = require('../model/Network'); 
 const router = express.Router();
 
 // Fetch all groups the current user is a part of
@@ -32,7 +33,6 @@ router.post('/groups', async (req, res) => {
 // Fetch members of a group by group name
 router.get('/groups/:groupId/members', async (req, res) => {
     const { groupId } = req.params;
-    console.log(groupId);
     try {
         const group = await Group.findOne({ name: groupId });
         if (!group) {
@@ -42,21 +42,49 @@ router.get('/groups/:groupId/members', async (req, res) => {
         // Assuming the 'members' field in your group document is an array of user IDs
         // Here, we directly return this array. If you need to fetch user details, additional steps are required.
         res.json(group.members);
-        console.log(group.members);
     } catch (error) {
         console.error('Error fetching group members by name:', error);
         res.status(500).send('Internal server error');
     }
 });
 
+// Assuming your group is identified by a unique groupName in the URL
 
-// Adjusted to use POST for adding a user to a group, matching frontend expectations
+// Fetch non-member friends for a specific group (assumes groupName and currentUser are passed correctly)
+router.get('/groups/:groupName/nonMemberFriends', async (req, res) => {
+    const { groupName } = req.params;
+    const { currentUser } = req.query; // Assuming currentUser is passed as a query parameter for security reasons
+
+    try {
+        const group = await Group.findOne({ name: groupName });
+        if (!group) {
+            return res.status(404).send('Group not found');
+        }
+
+        const userNetwork = await Network.findOne({ userId: currentUser });
+        if (!userNetwork) {
+            return res.status(404).send('User network not found');
+        }
+
+        const nonMemberFriends = userNetwork.friends.filter(friendUserId =>
+            !group.members.includes(friendUserId)
+        );
+
+        res.json(nonMemberFriends);
+    } catch (error) {
+        console.error('Error fetching non-member friends:', error);
+        res.status(500).send('Internal server error');
+    }
+});
+
+
+// Backend route adjusted for adding a member
 router.post('/groups/:groupId/addMember', async (req, res) => {
     const { groupId } = req.params;
     const { userId } = req.body;
 
     try {
-        const group = await Group.findById(groupId);
+        const group = await Group.findOne({ name: groupId }); // Corrected line here
         if (!group) {
             return res.status(404).send('Group not found');
         }
@@ -67,18 +95,18 @@ router.post('/groups/:groupId/addMember', async (req, res) => {
 
         group.members.push(userId);
         await group.save();
+       
         res.json(group);
     } catch (error) {
         console.error('Error adding user to group:', error);
         res.status(500).send('Internal server error');
     }
 });
+
 // Adjusted to use POST for removing a user from a group, matching frontend expectations
 router.post('/groups/:groupName/removeMember', async (req, res) => {
     const { groupName } = req.params;
     const { userId } = req.body;
-    console.log(groupName, userId);
-
     try {
         // Note: Assuming 'name' is the correct field for group's name. Replace 'name' with the correct field if different.
         const group = await Group.findOne({ name: groupName }); // Corrected line here
