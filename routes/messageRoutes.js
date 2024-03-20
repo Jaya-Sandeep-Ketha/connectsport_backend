@@ -5,12 +5,10 @@ const router = express.Router();
 // Post a new message
 router.post('/:userID/messages', async (req, res) => {
     const { senderId, receiverId, text } = req.body;
-    console.log(`Received message to post from ${senderId} to ${receiverId}`, req.body); // Log the message details
-
+   
     try {
         const newMessage = new Message({ senderId, receiverId, text });
         await newMessage.save();
-        console.log('Message saved:', newMessage); // Log the saved message
         res.status(201).json(newMessage);
     } catch (error) {
         console.error('Error sending message:', error); // Log any errors

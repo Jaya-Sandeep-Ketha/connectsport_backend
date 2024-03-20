@@ -4,7 +4,6 @@ const Message = require('../model/Message');
 const router = express.Router();
 
 // Fetch all groups the current user is a part of
-// Fetch all groups the current user is a part of
 router.get('/groups/:currentUser', async (req, res) => {
     const currentUser = req.params.currentUser;
 
@@ -33,7 +32,7 @@ router.post('/groups', async (req, res) => {
 // Fetch members of a group by group name
 router.get('/groups/:groupId/members', async (req, res) => {
     const { groupId } = req.params;
-
+    console.log(groupId);
     try {
         const group = await Group.findOne({ name: groupId });
         if (!group) {
@@ -43,6 +42,7 @@ router.get('/groups/:groupId/members', async (req, res) => {
         // Assuming the 'members' field in your group document is an array of user IDs
         // Here, we directly return this array. If you need to fetch user details, additional steps are required.
         res.json(group.members);
+        console.log(group.members);
     } catch (error) {
         console.error('Error fetching group members by name:', error);
         res.status(500).send('Internal server error');
@@ -73,14 +73,15 @@ router.post('/groups/:groupId/addMember', async (req, res) => {
         res.status(500).send('Internal server error');
     }
 });
-
 // Adjusted to use POST for removing a user from a group, matching frontend expectations
-router.post('/groups/:groupId/removeMember', async (req, res) => {
-    const { groupId } = req.params;
+router.post('/groups/:groupName/removeMember', async (req, res) => {
+    const { groupName } = req.params;
     const { userId } = req.body;
+    console.log(groupName, userId);
 
     try {
-        const group = await Group.findById(groupId);
+        // Note: Assuming 'name' is the correct field for group's name. Replace 'name' with the correct field if different.
+        const group = await Group.findOne({ name: groupName }); // Corrected line here
         if (!group) {
             return res.status(404).send('Group not found');
         }
