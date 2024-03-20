@@ -3,6 +3,20 @@ const Group = require('../model/group');
 const Message = require('../model/Message');
 const router = express.Router();
 
+// Fetch all groups the current user is a part of
+// Fetch all groups the current user is a part of
+router.get('/groups/:currentUser', async (req, res) => {
+    const currentUser = req.params.currentUser;
+
+    try {
+        const groups = await Group.find({ members: currentUser });
+        res.json(groups);
+    } catch (error) {
+        console.error('Error fetching groups for current user:', error);
+        res.status(500).send('Internal server error');
+    }
+});
+
 // Create a new group
 router.post('/groups', async (req, res) => {
     const { name, members } = req.body;
