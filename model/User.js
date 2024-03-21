@@ -27,6 +27,14 @@ const userSchema = new mongoose.Schema({
       type: String,
       default: null
     },
+    friends: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    }],
+    friendRequests: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    }],
   },
   { collection: "users"}
   );

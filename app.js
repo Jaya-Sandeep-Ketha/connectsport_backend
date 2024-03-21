@@ -11,6 +11,7 @@ const settings = require("./routes/settings");
 const networkRoutes = require('./routes/networkRoutes');
 const messagingRoutes = require('./routes/messageRoutes');
 const groupRoutes = require('./routes/groupRoutes'); // The path might differ based on your file structure
+const friendsRoutes = require('./routes/friendsRoutes');
 
 
 
@@ -47,5 +48,6 @@ app.use("/", settings);
 app.use("/", messagingRoutes);
 app.use("/", networkRoutes);
 app.use("/", groupRoutes);
+app.use("/", friendsRoutes);
 
 app.listen(3000, () => console.log("Server is running on port 3000"));
