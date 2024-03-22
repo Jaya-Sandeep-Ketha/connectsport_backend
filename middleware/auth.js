@@ -1,5 +1,5 @@
-// const User = require("../model/User");
-// require("dotenv").config();
+const User = require("../model/User");
+require("dotenv").config();
 // const jwt = require("jsonwebtoken");
 
 // module.exports.userVerification = (req, res) => {
@@ -17,3 +17,27 @@
 //       }
 //     })
 //   }
+// middleware/auth.js
+const jwt = require('jsonwebtoken');
+
+const authenticateToken = async(req, res, next) => {
+    const authHeader = req.header("Authorization");
+    const token = authHeader && authHeader.split(' ')[1];
+    console.log(token);
+    if (token == null) return res.sendStatus(401); // Unauthorized
+
+    
+    try{
+       const isVerify= jwt.verify(token, process.env.JWT_SECRET);
+       
+       req.userId=isVerify.userId;
+       console.log(req.userId);
+
+        next();
+    }
+    catch(error){
+        return res.status(401).json({message:"Unauthorized token"})
+
+    };
+};
+module.exports = authenticateToken;
