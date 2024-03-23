@@ -9,6 +9,10 @@ router.post('/send-request', friendsController.sendFriendRequest);
 router.post('/cancel-request', friendsController.cancelFriendRequest);
 router.post('/accept-request', friendsController.acceptFriendRequest);
 router.post('/reject-request', friendsController.rejectFriendRequest);
+router.get('/search', friendsController.searchUsers);
+router.post('/block', friendsController.blockUser);
+
+
 
 
 

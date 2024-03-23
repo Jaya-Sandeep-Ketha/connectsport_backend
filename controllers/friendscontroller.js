@@ -47,6 +47,56 @@ exports.getFriendRequests = async (req, res) => {
     }
 };
 
+exports.searchUsers = async (req, res) => {
+    try {
+        const { searchTerm } = req.query;
+        const { userId } = req; // Assuming you get userId from middleware (authentication)
+
+        if (!searchTerm) {
+            return res.status(400).json({ message: 'Search term is required' });
+        }
+
+        // Creating a regex pattern to match first name or last name or userId
+        const searchPattern = new RegExp(searchTerm, 'i');
+
+        const users = await User.find({
+            $or: [
+                { userId: searchPattern },
+                { firstName: searchPattern },
+                { lastName: searchPattern }
+            ],
+            _id: { $ne: userId } // Exclude current user from search results
+        }, 'userId firstName lastName -_id'); // Adjust fields as needed
+
+        res.json(users);
+    } catch (error) {
+        console.error('Error searching users:', error);
+        res.status(500).send({ message: 'Error searching users', error });
+    }
+};
+
+exports.blockUser = async (req, res) => {
+    const { userId, targetUserId } = req.body;
+
+    try {
+        // Assuming a Network model that references the User model
+        await Network.findOneAndUpdate({ userId }, {
+            $pull: { friends: targetUserId, reqReceived: targetUserId, reqSent: targetUserId },
+            $addToSet: { blocked: targetUserId }
+        });
+
+        // Optionally, update the target user's network too
+        await Network.findOneAndUpdate({ userId: targetUserId }, {
+            $pull: { friends: userId, reqReceived: userId, reqSent: userId }
+        });
+
+        res.json({ message: `User ${targetUserId} blocked successfully` });
+    } catch (error) {
+        console.error('Error blocking user:', error);
+        res.status(500).send({ message: 'Error blocking user', error });
+    }
+};
+
 
 exports.getPeopleYouMayKnow = async (req, res) => {
     try {
