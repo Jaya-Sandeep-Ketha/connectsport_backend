@@ -140,9 +140,49 @@ exports.unblockUser = async (req, res) => {
 };
 
 
+// exports.getPeopleYouMayKnow = async (req, res) => {
+//     try {
+//         const userId = req.query.userId;
+
+//         let userNetwork = await Network.findOne({ userId });
+//         if (!userNetwork) {
+//             userNetwork = new Network({
+//                 userId,
+//                 friends: [],
+//                 blocked: [],
+//                 reqSent: [],
+//                 reqReceived: []
+//             });
+//             await userNetwork.save();
+//         }
+
+//         const excludedUserIds = [
+//             userId,
+//             ...userNetwork.friends,
+//             ...userNetwork.blocked,
+//             ...userNetwork.reqSent,
+//             ...userNetwork.reqReceived
+//         ];
+
+//         const potentialFriends = await User.find({ userId: { $nin: excludedUserIds } }, 'userId firstName lastName');
+
+//         const potentialFriendsData = potentialFriends.map(friend => ({
+//             userId: friend.userId,
+//             name: `${friend.firstName} ${friend.lastName}`,
+//             mutualFriends: 0 // Placeholder, adjust as needed
+//         }));
+
+//         res.json(potentialFriendsData);
+//     } catch (error) {
+//         console.error('Error in getPeopleYouMayKnow:', error);
+//         res.status(500).send({ message: 'Error fetching people you may know', error });
+//     }
+// };
+
+
 exports.getPeopleYouMayKnow = async (req, res) => {
     try {
-        const userId = req.query.userId;
+        const { userId, sport, friend } = req.query;
 
         let userNetwork = await Network.findOne({ userId });
         if (!userNetwork) {
@@ -164,12 +204,34 @@ exports.getPeopleYouMayKnow = async (req, res) => {
             ...userNetwork.reqReceived
         ];
 
-        const potentialFriends = await User.find({ userId: { $nin: excludedUserIds } }, 'userId firstName lastName');
+        // Start with a basic filter that excludes certain users.
+        let queryFilter = { userId: { $nin: excludedUserIds } };
 
+        // If the sport filter is applied, adjust the query filter accordingly.
+        if (sport) {
+            queryFilter.favoriteSports = sport;
+        }
+
+        // If the friend filter is applied, adjust the query to include only friends of the specified friend.
+        if (friend) {
+            const friendNetwork = await Network.findOne({ userId: friend });
+            if (friendNetwork && friendNetwork.friends.length) {
+                queryFilter.userId = { $in: friendNetwork.friends, $nin: excludedUserIds };
+            } else {
+                // If the specified friend has no friends or does not exist, return an empty array.
+                return res.json([]);
+            }
+        }
+
+        // Execute the query with the constructed filters.
+        const potentialFriends = await User.find(queryFilter, 'userId firstName lastName favoriteSports');
+
+        // Map the results to the desired format. Adjust according to your needs.
         const potentialFriendsData = potentialFriends.map(friend => ({
             userId: friend.userId,
             name: `${friend.firstName} ${friend.lastName}`,
-            mutualFriends: 0 // Placeholder, adjust as needed
+            mutualFriends: 0, // Placeholder, calculate actual mutual friends count as needed
+            favoriteSports: friend.favoriteSports // Include this if you want to show their sports interest
         }));
 
         res.json(potentialFriendsData);
@@ -179,30 +241,6 @@ exports.getPeopleYouMayKnow = async (req, res) => {
     }
 };
 
-
-// // Method to send a friend request
-// exports.sendFriendRequest = async (req, res) => {
-//     const { userId, targetUserId } = req.body; // Assume body contains your userId and the target's userId
-
-//     try {
-//         // Update the requester's Network to include targetUserId in reqSent
-//         await Network.updateOne(
-//             { userId: userId },
-//             { $addToSet: { reqSent: targetUserId } } // $addToSet avoids duplicates
-//         );
-
-//         // Update the target's Network to include your userId in reqReceived
-//         await Network.updateOne(
-//             { userId: targetUserId },
-//             { $addToSet: { reqReceived: userId } }
-//         );
-
-//         res.status(200).json({ message: "Friend request sent successfully." });
-//     } catch (error) {
-//         console.error('Error sending friend request:', error);
-//         res.status(500).send({ message: 'Error sending friend request', error });
-//     }
-// };
 
 exports.sendFriendRequest = async (req, res) => {
     const { userId, targetUserId } = req.body;
@@ -296,5 +334,28 @@ exports.rejectFriendRequest = async (req, res) => {
     } catch (error) {
         console.error('Error rejecting friend request:', error);
         res.status(500).send({ message: 'Error rejecting friend request', error });
+    }
+};
+
+exports.getSportsOptions = async (req, res) => {
+    try {
+        // Assuming 'favoriteSports' field exists and is an array
+        const sports = await User.distinct('favoriteSports');
+        res.json(sports);
+    } catch (error) {
+        console.error('Error fetching sports options:', error);
+        res.status(500).json({ message: 'Server error', error });
+    }
+};
+
+exports.getFriendsOptions = async (req, res) => {
+    try {
+        // This could vary: fetch all users, or just friends of the current user, etc.
+        // Here we just fetch all user names as possible friends options
+        const friendsOptions = await User.distinct('name');
+        res.json(friendsOptions.filter(name => name)); // Filter out any null/undefined names
+    } catch (error) {
+        console.error('Error fetching friends options:', error);
+        res.status(500).json({ message: 'Server error', error });
     }
 };

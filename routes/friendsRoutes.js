@@ -15,6 +15,8 @@ router.post('/block', friendsController.blockUser);
 router.post('/unblock', friendsController.unblockUser);
 // Route to fetch blocked users
 router.get('/blocked-users', friendsController.getBlockedUsers);
+router.get('/sports-options', friendsController.getSportsOptions);
+router.get('/friends-options', friendsController.getFriendsOptions);
 
 
 module.exports = router;
