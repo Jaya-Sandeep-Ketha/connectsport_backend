@@ -11,9 +11,10 @@ router.post('/accept-request', friendsController.acceptFriendRequest);
 router.post('/reject-request', friendsController.rejectFriendRequest);
 router.get('/search', friendsController.searchUsers);
 router.post('/block', friendsController.blockUser);
-
-
-
+// Route for unblocking a user
+router.post('/unblock', friendsController.unblockUser);
+// Route to fetch blocked users
+router.get('/blocked-users', friendsController.getBlockedUsers);
 
 
 module.exports = router;

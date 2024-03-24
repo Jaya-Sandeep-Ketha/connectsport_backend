@@ -18,7 +18,6 @@ exports.getFriendRequests = async (req, res) => {
         let network = await Network.findOne({ userId }).populate('reqReceived');
 
         if (!network) {
-            console.log('Network not found for:', userId);
             network = new Network({
                 userId,
                 friends: [],
@@ -46,6 +45,31 @@ exports.getFriendRequests = async (req, res) => {
         res.status(500).send({ message: 'Error fetching friend requests', error });
     }
 };
+
+exports.getBlockedUsers = async (req, res) => {
+    const { userId } = req.query;
+    try {
+        // Ensure that 'Network.findOne' queries a string field. If 'userId' in Network is stored as a string,
+        // this query is correct. Make sure 'userId' matches the type and content expected in the database.
+        const userNetwork = await Network.findOne({ userId });
+
+        if (!userNetwork) {
+            console.error('User network not found for userId:', userId);
+            return res.status(404).json({ message: 'User network not found' });
+        }
+
+        // Ensure the 'blocked' array in Network documents contains strings that match the 'userId' field of User documents.
+        // This query assumes that 'userId' in the User model is a string. If your User model uses '_id' as the user identifier
+        // and 'userId' for something else, make sure this query aligns with your schema design.
+        const blockedUsers = await User.find({ 'userId': { $in: userNetwork.blocked } });
+
+        res.json(blockedUsers);
+    } catch (error) {
+        console.error('Error fetching blocked users:', error);
+        res.status(500).send({ message: 'Error fetching blocked users', error });
+    }
+};
+
 
 exports.searchUsers = async (req, res) => {
     try {
@@ -97,15 +121,31 @@ exports.blockUser = async (req, res) => {
     }
 };
 
+exports.unblockUser = async (req, res) => {
+    const { userId, targetUserId } = req.body;
+
+    try {
+        await Network.findOneAndUpdate({ userId }, { $pull: { blocked: targetUserId } });
+
+        // Optionally, update the target user's network too
+        await Network.findOneAndUpdate({ userId: targetUserId }, {
+            $pull: { blocked: userId }
+        });
+
+        res.json({ message: `User ${targetUserId} unblocked successfully` });
+    } catch (error) {
+        console.error('Error unblocking user:', error);
+        res.status(500).send({ message: 'Error unblocking user', error });
+    }
+};
+
 
 exports.getPeopleYouMayKnow = async (req, res) => {
     try {
         const userId = req.query.userId;
-        console.log('Fetching network for user:', userId);
 
         let userNetwork = await Network.findOne({ userId });
         if (!userNetwork) {
-            console.log('User network not found for:', userId, ', adding to network db.');
             userNetwork = new Network({
                 userId,
                 friends: [],
