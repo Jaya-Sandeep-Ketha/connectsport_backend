@@ -348,12 +348,55 @@ exports.getSportsOptions = async (req, res) => {
     }
 };
 
+// exports.getFriendsOptions = async (req, res) => {
+//     try {
+//         const { userId } = req.query;
+//         console.log(`Received request to fetch friends options for userId: ${userId}`);
+
+//         const userNetwork = await Network.findOne({ userId: userId });
+//         if (!userNetwork) {
+//             console.log(`User network not found for userId: ${userId}`);
+//             return res.status(404).json({ message: 'User network not found' });
+//         }
+
+//         const friends = await User.find({ 'userId': { $in: userNetwork.friends } }, 'userId name');
+//         console.log(`Found friends for userId ${userId}:`, friends);
+
+//         const friendsOptions = friends.map(friend => {
+//             return { userId: friend.userId, name: friend.First };
+//         }).filter(option => option.name);
+//         console.log(`Prepared friends options for userId ${userId}:`, friendsOptions);
+
+//         res.json(friendsOptions);
+//     } catch (error) {
+//         console.error('Error fetching friends options:', error);
+//         res.status(500).json({ message: 'Server error', error });
+//     }
+// };
+
 exports.getFriendsOptions = async (req, res) => {
     try {
-        // This could vary: fetch all users, or just friends of the current user, etc.
-        // Here we just fetch all user names as possible friends options
-        const friendsOptions = await User.distinct('name');
-        res.json(friendsOptions.filter(name => name)); // Filter out any null/undefined names
+        const { userId } = req.query; // Ensuring this matches how the front-end passes the user's ID
+
+        // Find the current user's network to get their list of friends
+        const userNetwork = await Network.findOne({ userId: userId });
+        if (!userNetwork) {
+            return res.status(404).json({ message: 'User network not found' });
+        }
+
+        // Fetch the details of these friends based on the IDs in the user's friends list
+        const friends = await User.find({ 'userId': { $in: userNetwork.friends } }, 'userId firstName lastName');
+
+        // Extract the first and last names to construct a full name for the response
+        const friendsOptions = friends.map(friend => {
+            return {
+                userId: friend.userId,
+                name: `${friend.firstName} ${friend.lastName}`.trim() // Combine first and last names
+            };
+        }).filter(option => option.name); // Filter out any entries without names
+
+        console.log(`Prepared friends options for userId ${userId}:`, friendsOptions);
+        res.json(friendsOptions); // This ensures an array is sent back, even if empty
     } catch (error) {
         console.error('Error fetching friends options:', error);
         res.status(500).json({ message: 'Server error', error });
