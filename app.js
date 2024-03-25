@@ -16,6 +16,7 @@ const friendsRoutes = require('./routes/friendsRoutes');
 
 
 const app = express();
+const PORT = process.env.PORT || 3000; // Use the port provided by the environment variable PORT, or default to 3000
 
 // console.log(process.env.MONGODB_URI); // Remove after testing
 // console.log(process.env.JWT_SECRET); // Remove after testing
@@ -50,4 +51,7 @@ app.use("/", networkRoutes);
 app.use("/", groupRoutes);
 app.use("/", friendsRoutes);
 
-app.listen(3000, () => console.log("Server is running on port 3000"));
+// app.listen(3000, () => console.log("Server is running on port 3000"));
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Server is running on port ${PORT}`);
+});
