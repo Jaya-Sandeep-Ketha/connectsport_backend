@@ -6,7 +6,8 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "postinstall": "node -v",
-    "start": "node app.js"
+    "start": "node app.js",
+    "build":"npm i"
   },
   "author": "",
   "license": "ISC",

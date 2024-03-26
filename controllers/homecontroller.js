@@ -1,5 +1,6 @@
 const User = require('../model/User');
 const Posts=require('../model/Posts');
+const Network=require('../model/Network');
 const fs = require('fs');
 const cloudinary =require("cloudinary");
           
@@ -13,9 +14,19 @@ cloudinary.config({
 exports.home = async(req,res)=>{
     try {
         const userId = req.userId; // Extracted from JWT token
-        console.log(userId);
         const userPosts = await Posts.find({ userId: userId }).sort({ createdAt: -1 });
-        res.json(userPosts);
+        const userNetwork=await Network.find({userId: userId});
+        let friendsPosts=[];
+        if(userNetwork && userNetwork[0].friends.length>0){
+          const friends=userNetwork[0].friends;
+          for(let i=0;i<friends.length;i++)
+          {
+            friendsPosts=await Posts.find({userId:friends[i]}).sort({createdAt:-1});
+            friendsPosts=friendsPosts.concat(friendsPosts);
+          }
+        }
+        const allPosts=[...userPosts, ...friendsPosts]
+        res.json(allPosts);
     } catch (error) {
         console.error('Error fetching user posts:', error);
         res.status(500).json({ error: 'Internal server error' });
@@ -30,9 +41,7 @@ exports.addNewPost = async (req, res) => {
     if (!content || !tag || !author || !imageFile) {
       return res.status(400).json({ error: 'Missing required data' });
     }
-    console.log(typeof(content));
     const result= await cloudinary.uploader.upload(req.files.image.path);
-    console.log(result);
       // Example: Create a new post document with image data
     const newPost = new Posts({
       postTitle: tag, // Convert to string if necessary
