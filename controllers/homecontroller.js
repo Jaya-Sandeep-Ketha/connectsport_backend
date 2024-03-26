@@ -16,16 +16,22 @@ exports.home = async(req,res)=>{
         const userId = req.userId; // Extracted from JWT token
         const userPosts = await Posts.find({ userId: userId }).sort({ createdAt: -1 });
         const userNetwork=await Network.find({userId: userId});
-        let friendsPosts=[];
+        let FriendPost=[];
+        let userFriendsPosts=[]
         if(userNetwork && userNetwork[0].friends.length>0){
           const friends=userNetwork[0].friends;
+          console.log(friends);
           for(let i=0;i<friends.length;i++)
           {
-            friendsPosts=await Posts.find({userId:friends[i]}).sort({createdAt:-1});
-            friendsPosts=friendsPosts.concat(friendsPosts);
+            FriendPost=await Posts.find({userId:friends[i]}).sort({createdAt:-1});
+            if(FriendPost!=[]){
+              console.log(FriendPost);
+              userFriendsPosts=userFriendsPosts.concat(FriendPost);
+            }
           }
+          console.log(userFriendsPosts);
         }
-        const allPosts=[...userPosts, ...friendsPosts]
+        const allPosts=[...userPosts, ...userFriendsPosts]
         res.json(allPosts);
     } catch (error) {
         console.error('Error fetching user posts:', error);
@@ -63,4 +69,5 @@ exports.addNewPost = async (req, res) => {
     }
   };
   
+
   
