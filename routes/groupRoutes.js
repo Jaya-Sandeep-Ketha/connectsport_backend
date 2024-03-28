@@ -2,6 +2,7 @@ const express = require('express');
 const Group = require('../model/group');
 const Message = require('../model/Message');
 const Network = require('../model/Network'); 
+const { createNotification } = require('../controllers/notificationsController');
 const router = express.Router();
 
 // Fetch all groups the current user is a part of

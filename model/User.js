@@ -35,6 +35,7 @@ const userSchema = new mongoose.Schema({
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User'
     }],
+    lastLogout: { type: Date }
   },
   { collection: "users"}
   );

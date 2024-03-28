@@ -58,35 +58,61 @@ const register = async (req, res) => {
     }
 };
 
-
+const userLoggedOut = async (userId) => {
+  console.log(`Attempting to log out user with ID: ${userId}`);
+  await UserModel.findOneAndUpdate({ userId: userId }, { $set: { lastLogout: new Date() } });
+  console.log(`Successfully updated logout time for user with ID: ${userId}`);
+};
 
 const login = async (req, res) => {
-    const { userId, password }= req.body;
-    // Validate data
-    if (!userId || !password) {
-      return res.status(400).send("Missing user ID or password");
+  const { userId, password }= req.body;
+  // Validate data
+  if (!userId || !password) {
+    return res.status(400).send("Missing user ID or password");
+  }
+
+  // Check if user exists and password is correct
+  try {
+    const user = await UserModel.findOne({ userId: userId });
+    if (!user) {
+      return res.status(400).send("User not found");
     }
-  
-    // Check if user exists and password is correct
-    try {
-      const user = await UserModel.findOne({ userId: userId });
-      if (!user) {
-        return res.status(400).send("User not found");
-      }
-      const match = await bcrypt.compare(password, user.password);
-      if (!match) {
-        return res.status(400).send("Incorrect password");
-      }
-  
-      // JWT token creation
-      const token = jwt.sign({ userId: user.userId }, process.env.JWT_SECRET, {
-        expiresIn: "24h",
-      });
-      res.json({ message: "Login successful", token, userId: user.userId });
-    } catch (error) {
-      console.error("Error during login:", error);
-      res.status(500).send("Error during login");
+    const match = await bcrypt.compare(password, user.password);
+    if (!match) {
+      return res.status(400).send("Incorrect password");
     }
+
+    // JWT token creation
+    const token = jwt.sign({ userId: user.userId }, process.env.JWT_SECRET, {
+      expiresIn: "24h",
+    });
+    res.json({ message: "Login successful", token, userId: user.userId });
+  } catch (error) {
+    console.error("Error during login:", error);
+    res.status(500).send("Error during login");
+  }
+};
+
+const logout = async (req, res) => {
+  try {
+      const userId = req.body.userId; // Get userId from request body
+      console.log("Received request body:", req.body);
+      console.log(`Logout request received for user ID: ${userId}`);
+
+      // Validate userId presence
+      if (!userId) {
+          console.log("Logout attempt without a user ID");
+          return res.status(400).send("User ID is missing");
+      }
+
+      // Update user's last logout time
+      await userLoggedOut(userId);
+      console.log(`Logout successful for user ID: ${userId}`);
+      res.send("Logout successful");
+  } catch (error) {
+      console.error("Error during logout:", error);
+      res.status(500).send("Error during logout");
+  }
 };
 
 // Add the googleAuth function
@@ -106,6 +132,7 @@ const googleAuth = async (req, res) => {
     });
     await user.save();
   }
+  await userLoggedIn(user._id);
 
   // JWT token creation
   const token = jwt.sign({ userId: user.userId }, process.env.JWT_SECRET, {
@@ -146,6 +173,7 @@ const facebookAuth = async (req, res) => {
 
 module.exports = {
   login,
+  logout,
   register,
   googleAuth,
   facebookAuth,

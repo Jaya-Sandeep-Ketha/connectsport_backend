@@ -1,16 +1,6 @@
 const Network = require('../model/Network');
 const User = require('../model/User');
-
-// // Define controller methods
-// exports.getFriendRequests = async (req, res) => {
-//     try {
-//         const userId = req.query.userId; // As we're getting userId from query parameters
-//         const network = await Network.findOne({ userId }).populate('reqReceived');
-//         res.json(network ? network.reqReceived : []);
-//     } catch (error) {
-//         res.status(500).send({ message: 'Error fetching friend requests', error });
-//     }
-// };
+const { createNotification } = require('./notificationsController');
 
 exports.getFriendRequests = async (req, res) => {
     try {
@@ -139,47 +129,6 @@ exports.unblockUser = async (req, res) => {
     }
 };
 
-
-// exports.getPeopleYouMayKnow = async (req, res) => {
-//     try {
-//         const userId = req.query.userId;
-
-//         let userNetwork = await Network.findOne({ userId });
-//         if (!userNetwork) {
-//             userNetwork = new Network({
-//                 userId,
-//                 friends: [],
-//                 blocked: [],
-//                 reqSent: [],
-//                 reqReceived: []
-//             });
-//             await userNetwork.save();
-//         }
-
-//         const excludedUserIds = [
-//             userId,
-//             ...userNetwork.friends,
-//             ...userNetwork.blocked,
-//             ...userNetwork.reqSent,
-//             ...userNetwork.reqReceived
-//         ];
-
-//         const potentialFriends = await User.find({ userId: { $nin: excludedUserIds } }, 'userId firstName lastName');
-
-//         const potentialFriendsData = potentialFriends.map(friend => ({
-//             userId: friend.userId,
-//             name: `${friend.firstName} ${friend.lastName}`,
-//             mutualFriends: 0 // Placeholder, adjust as needed
-//         }));
-
-//         res.json(potentialFriendsData);
-//     } catch (error) {
-//         console.error('Error in getPeopleYouMayKnow:', error);
-//         res.status(500).send({ message: 'Error fetching people you may know', error });
-//     }
-// };
-
-
 exports.getPeopleYouMayKnow = async (req, res) => {
     try {
         const { userId, sport, friend } = req.query;
@@ -258,6 +207,12 @@ exports.sendFriendRequest = async (req, res) => {
         // Update the target's Network to include userId in reqReceived
         await Network.updateOne({ userId: targetUserId }, { $addToSet: { reqReceived: userId } });
 
+        await createNotification(
+            targetUserId, // Receiver of the notification
+            `${userId} sent you a friend request.`, // Message of the notification
+            "friend_request_sent" // Type of the notification
+        );
+
         res.status(200).json({ message: "Friend request sent successfully." });
     } catch (error) {
         console.error('Error sending friend request:', error);
@@ -306,6 +261,12 @@ exports.acceptFriendRequest = async (req, res) => {
         await Network.findOneAndUpdate(
             { userId: friendId },
             { $pull: { reqSent: userId }, $addToSet: { friends: userId } }
+        );
+
+        await createNotification(
+            friendId, // Receiver of the notification
+            `Your friend request to ${userId} has been accepted.`, // Message of the notification
+            "friend_request_accepted" // Type of the notification
         );
 
         res.status(200).json({ message: "Friend request accepted." });
