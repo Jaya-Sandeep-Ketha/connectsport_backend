@@ -1,11 +1,13 @@
 const express = require("express");
 const homepageRouter = express.Router();
 const authenticateToken= require('../middleware/auth');
-const {home, addNewPost}=require('../controllers/homecontroller');
+const {home, addNewPost,handleLike,addComment}=require('../controllers/homecontroller');
 const expressFormidable =require("express-formidable");
 
 homepageRouter.get('/posts',authenticateToken,home);
 homepageRouter.post('/newpost',authenticateToken,expressFormidable({maxFieldsSize:5*1024*1024}),addNewPost);
+homepageRouter.put('/:user/posts/:id/like',handleLike);
+homepageRouter.put('/:user/posts/:id/comment',addComment);
 //homepageRouter.delete('/posts/:id',deletepost);
 // Sample data for posts
 // let posts = [

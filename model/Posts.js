@@ -1,6 +1,11 @@
 const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
 
+const commentSchema = new Schema({
+    content: { type: String, required: true },
+    commenter: { type: String, ref: "User", required: true },
+    createdAt: { type: Date, default: Date.now }
+  });
 
 const postSchema = new Schema({
 
@@ -14,7 +19,9 @@ const postSchema = new Schema({
 url: {
     type: String,
     required: true
-} }
+} },
+likes:[{type:String,ref:"User"}],
+comments:[commentSchema]
 }, { timestamps: true }
 )
 

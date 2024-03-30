@@ -20,16 +20,13 @@ exports.home = async(req,res)=>{
         let userFriendsPosts=[]
         if(userNetwork && userNetwork[0].friends.length>0){
           const friends=userNetwork[0].friends;
-          console.log(friends);
           for(let i=0;i<friends.length;i++)
           {
             FriendPost=await Posts.find({userId:friends[i]}).sort({createdAt:-1});
             if(FriendPost!=[]){
-              console.log(FriendPost);
               userFriendsPosts=userFriendsPosts.concat(FriendPost);
             }
           }
-          console.log(userFriendsPosts);
         }
         const allPosts=[...userPosts, ...userFriendsPosts]
         res.json(allPosts);
@@ -69,5 +66,64 @@ exports.addNewPost = async (req, res) => {
     }
   };
   
+exports.handleLike = async(req,res) => {
+  try{
+    const user=req.params.user;
+    const postId=req.params.id;
+    let updatedPost;
+    // Check if user is already in likes array
+    const post = await Posts.findById(postId);
+    if (!post) {
+      return res.status(404).json({ error: 'Post not found' });
+    }
 
-  
+    const likesSet = new Set(post.likes);
+    if (likesSet.has(user)) {
+      // User is already in likes, so remove the user
+      updatedPost = await Posts.findByIdAndUpdate(
+        postId,
+        { $pull: { likes: user } },
+        { new: true }
+      );
+    } else {
+      // User is not in likes, so add the user
+      updatedPost = await Posts.findByIdAndUpdate(
+        postId,
+        { $addToSet: { likes: user } },
+        { new: true }
+      );
+    }
+
+    // Send the updated post back as JSON response
+    res.status(201).json(updatedPost);
+  }
+  catch(error){
+    console.error('Error updating post:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+}
+ 
+
+
+exports.addComment =async(req,res) => {
+  try{
+    const user=req.params.user;
+    const postId=req.params.id;
+    const { content } = req.body;
+    const updatedPost= await Posts.findByIdAndUpdate(postId,{
+      $push:{comments:{ content, commenter:user }}
+    },{
+      new:true
+    });
+    if (!updatedPost) {
+      return res.status(404).json({ error: 'Post not found' });
+    }
+
+    // Send the updated post back as JSON response
+    res.status(201).json(updatedPost);
+  }
+  catch(error){
+    console.error('Error updating post:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+}
