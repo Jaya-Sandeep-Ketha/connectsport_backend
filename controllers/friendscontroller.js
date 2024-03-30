@@ -39,18 +39,12 @@ exports.getFriendRequests = async (req, res) => {
 exports.getBlockedUsers = async (req, res) => {
     const { userId } = req.query;
     try {
-        // Ensure that 'Network.findOne' queries a string field. If 'userId' in Network is stored as a string,
-        // this query is correct. Make sure 'userId' matches the type and content expected in the database.
         const userNetwork = await Network.findOne({ userId });
 
         if (!userNetwork) {
             console.error('User network not found for userId:', userId);
             return res.status(404).json({ message: 'User network not found' });
         }
-
-        // Ensure the 'blocked' array in Network documents contains strings that match the 'userId' field of User documents.
-        // This query assumes that 'userId' in the User model is a string. If your User model uses '_id' as the user identifier
-        // and 'userId' for something else, make sure this query aligns with your schema design.
         const blockedUsers = await User.find({ 'userId': { $in: userNetwork.blocked } });
 
         res.json(blockedUsers);
@@ -60,12 +54,10 @@ exports.getBlockedUsers = async (req, res) => {
     }
 };
 
-
 exports.searchUsers = async (req, res) => {
     try {
         const { searchTerm } = req.query;
-        const { userId } = req; // Assuming you get userId from middleware (authentication)
-
+        const { userId } = req; 
         if (!searchTerm) {
             return res.status(400).json({ message: 'Search term is required' });
         }
@@ -308,32 +300,6 @@ exports.getSportsOptions = async (req, res) => {
         res.status(500).json({ message: 'Server error', error });
     }
 };
-
-// exports.getFriendsOptions = async (req, res) => {
-//     try {
-//         const { userId } = req.query;
-//         console.log(`Received request to fetch friends options for userId: ${userId}`);
-
-//         const userNetwork = await Network.findOne({ userId: userId });
-//         if (!userNetwork) {
-//             console.log(`User network not found for userId: ${userId}`);
-//             return res.status(404).json({ message: 'User network not found' });
-//         }
-
-//         const friends = await User.find({ 'userId': { $in: userNetwork.friends } }, 'userId name');
-//         console.log(`Found friends for userId ${userId}:`, friends);
-
-//         const friendsOptions = friends.map(friend => {
-//             return { userId: friend.userId, name: friend.First };
-//         }).filter(option => option.name);
-//         console.log(`Prepared friends options for userId ${userId}:`, friendsOptions);
-
-//         res.json(friendsOptions);
-//     } catch (error) {
-//         console.error('Error fetching friends options:', error);
-//         res.status(500).json({ message: 'Server error', error });
-//     }
-// };
 
 exports.getFriendsOptions = async (req, res) => {
     try {

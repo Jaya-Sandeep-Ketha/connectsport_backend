@@ -1,38 +1,8 @@
 const express = require('express');
-const Message = require('../model/Message'); // Path to your Message model
 const router = express.Router();
+const messageController = require('../controllers/messageController'); // Adjust the path as necessary
 
-// Post a new message
-router.post('/:userID/messages', async (req, res) => {
-    const { senderId, receiverId, text } = req.body;
-   
-    try {
-        const newMessage = new Message({ senderId, receiverId, text });
-        await newMessage.save();
-        res.status(201).json(newMessage);
-    } catch (error) {
-        console.error('Error sending message:', error); // Log any errors
-        res.status(500).send('Internal server error');
-    }
-});
-
-// Existing backend route for fetching messages
-router.get('/messages', async (req, res) => {
-    const { senderId, receiverId } = req.query;
-
-    try {
-        const messages = await Message.find({
-            $or: [
-                { $and: [{ senderId }, { receiverId }] },
-                { $and: [{ senderId: receiverId }, { receiverId: senderId }] }
-            ]
-        }).sort('timestamp');
-
-        res.json(messages);
-    } catch (error) {
-        console.error('Error fetching messages:', error);
-        res.status(500).send('Internal server error');
-    }
-});
+router.post('/:userID/messages', messageController.postMessage);
+router.get('/messages', messageController.getMessage);
 
 module.exports = router;
