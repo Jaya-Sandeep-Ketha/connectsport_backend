@@ -108,7 +108,7 @@ exports.handleLike = async(req,res) => {
 exports.addComment =async(req,res) => {
   try{
     const user=req.params.user;
-    const postId=req.params.id;
+    const postId=req.params.id;    
     const { content } = req.body;
     const updatedPost= await Posts.findByIdAndUpdate(postId,{
       $push:{comments:{ content, commenter:user }}
