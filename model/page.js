@@ -10,10 +10,11 @@ const pageSchema = new mongoose.Schema({
   title: { type: String, required: true },
   description: { type: String, required: true },
   date: Date,
-  type: { type: String, required: true, enum: ['event', 'organization'] },
+  type: { type: String, required: true, enum: ['Event', 'Organization'] },
   venue: String,
   askForDonations: { type: Boolean, default: false }, // New field for donation request option
   donationMobile: String, // Mobile number for donations
+  contactNumber: String, // Mobile number for contact
   createdBy: { type: String, ref: 'User', required: true },
   followers: [{ type: String, ref: 'User' }],
   donors: [donorSchema],
