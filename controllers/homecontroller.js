@@ -38,7 +38,9 @@ exports.home = async(req,res)=>{
 
 // Handle new post creation
 exports.addNewPost = async (req, res) => {
+  console.log("Received fields:", req.fields);
   try {
+    console.log("Received fields:", req.fields);
     const { content, tag, author } = req.fields;
     const imageFile = req.files;
     if (!content || !tag || !author || !imageFile) {
