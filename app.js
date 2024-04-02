@@ -13,7 +13,7 @@ const messagingRoutes = require('./routes/messageRoutes');
 const groupRoutes = require('./routes/groupRoutes'); // The path might differ based on your file structure
 const friendsRoutes = require('./routes/friendsRoutes');
 const notificationsRoutes = require('./routes/notificationRouter');
-
+const pageRoutes = require('./routes/pageRouter');
 
 
 const app = express();
@@ -52,6 +52,7 @@ app.use("/", networkRoutes);
 app.use("/", groupRoutes);
 app.use("/", friendsRoutes);
 app.use("/", notificationsRoutes);
+app.use("/", pageRoutes);
 
 // app.listen(3000, () => console.log("Server is running on port 3000"));
 app.listen(PORT, '0.0.0.0', () => {
