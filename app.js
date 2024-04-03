@@ -16,6 +16,7 @@ const notificationsRoutes = require('./routes/notificationRouter');
 const pageRoutes = require('./routes/pageRouter');
 
 
+
 const app = express();
 const PORT = process.env.PORT || 3000; // Use the port provided by the environment variable PORT, or default to 3000
 
