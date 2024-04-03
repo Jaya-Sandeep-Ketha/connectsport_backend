@@ -1,5 +1,6 @@
 const Page = require('../model/page');
 const Notification = require('../model/Notification'); // Assuming this exists
+const Posts=require('../model/Posts');
 
 // Fetch all pages
 exports.getPages = async (req, res) => {
@@ -103,6 +104,34 @@ exports.createPost = async (req, res) => {
   });
   res.status(200).send({ message: 'Content posted and notifications sent' });
 };
+
+
+// Fetch all pages
+exports.getPosts = async (req, res) => {
+  try {
+    console.log('Fetching posts for pageId:', req.params.id);
+    const pageId = req.params.id; // Extracting pageId from the URL
+
+    // Find posts related to the pageId, sorted by createdAt in descending order
+    const pagePosts = await Posts.find({ userId: pageId }).sort({ createdAt: -1 });
+    console.log('Found posts:', pagePosts);
+
+    // Check if posts are found
+    if (pagePosts.length === 0) {
+      return res.status(200).json({ message: 'No posts found for this page.', posts: [] });
+    }
+
+    // If posts are found, send them back in response
+    res.json(pagePosts);
+  } catch (error) {
+    console.error('Error fetching page posts:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+
+
+
 
 // Donate endpoint (Mock)
 exports.donate = async (req, res) => {
