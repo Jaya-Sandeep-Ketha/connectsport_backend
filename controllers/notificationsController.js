@@ -9,19 +9,12 @@ exports.fetchNotifications = async (req, res) => {
         const user = await User.findOne({ userId: req.params.userId });
 
         if (!user) {
-            console.log(`User not found for ID: ${userId}`); // Log when user is not found
             return res.status(404).json({ message: 'User not found' });
         }
-
-        console.log(`User found: ${user}, Last logout time: ${user.lastLogout}`); // Log user details
-
         const notifications = await Notification.find({
             userId: userId,
             createdAt: { $gt: user.lastLogout }
         }).sort({ createdAt: -1 });
-
-        console.log(`Found ${notifications.length} notifications for user ID: ${userId}`); // Log the number of notifications found
-
         res.json(notifications);
     } catch (error) {
         console.log(`Error fetching notifications for user ID: ${req.params.userId}: ${error}`); // Log the error
@@ -52,12 +45,13 @@ exports.deleteNotification = async (req, res) => {
 
 // Assuming Notification schema includes 'userId', 'message', and 'type'
 
-exports.createNotification = async (userId, message, type) => {
+exports.createNotification = async (userId, message, type, link = '') => {
     try {
         const notification = new Notification({
             userId,
             message,
-            type
+            type,
+            link
         });
         await notification.save();
         console.log(`Notification created: ${notification}`);
