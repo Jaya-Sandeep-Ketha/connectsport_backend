@@ -1,6 +1,7 @@
 const User = require('../model/User');
 const Posts=require('../model/Posts');
 const Network=require('../model/Network');
+const Notification = require('../model/Notification'); // Assuming this exists
 const fs = require('fs');
 const cloudinary =require("cloudinary");
           
@@ -59,14 +60,38 @@ exports.addNewPost = async (req, res) => {
     });
       // Save the new post
       await newPost.save();
-  
-  
-      res.status(201).json(newPost); // Send the created post data in the response
-    } catch (error) {
-      console.error('Error creating new post:', error);
-      res.status(500).json({ error: 'Internal server error' });
+      // Find the current user
+    const currentUser = await Network.findOne({ userId: author });
+
+     // Check if the user exists
+     if (!currentUser) {
+      return res.status(404).json({ error: "User not found" });
     }
-  };
+
+    // Notify friends if they exist
+    if (currentUser.friends && currentUser.friends.length > 0) {
+      await Promise.all(currentUser.friends.map(async (friendId) => {
+        // Log the friend ID being notified
+        console.log("Creating notification for friend ID:", friendId);
+        
+        // Create and save a new notification
+        const notification = new Notification({
+          userId: friendId,
+          message: `Your friend ${author} shared a post.`,
+          type: "Post_Shared",
+          link: '', // Assuming the front end can handle this route to direct users to the new post
+        });
+        await notification.save();
+      }));
+    }
+
+    // Return the created post data in the response
+    res.status(201).json(newPost);
+  } catch (error) {
+    console.error('Error creating new post:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
   
 exports.handleLike = async(req,res) => {
   try{
@@ -87,6 +112,7 @@ exports.handleLike = async(req,res) => {
         { $pull: { likes: user } },
         { new: true }
       );
+      actionTaken = 'unliked';
     } else {
       // User is not in likes, so add the user
       updatedPost = await Posts.findByIdAndUpdate(
@@ -94,6 +120,18 @@ exports.handleLike = async(req,res) => {
         { $addToSet: { likes: user } },
         { new: true }
       );
+      actionTaken = 'liked';
+    }
+
+    // Only send notification if a like was added
+    if (actionTaken === 'liked') {
+      const notification = new Notification({
+        userId: post.userId, // Assuming `userId` is the post owner
+        message: `${user} liked your post.`,
+        type: "Post_Liked",
+        link: '', // Assuming there's a route to view the post
+      });
+      await notification.save();
     }
 
     // Send the updated post back as JSON response
@@ -104,8 +142,6 @@ exports.handleLike = async(req,res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 }
- 
-
 
 exports.addComment =async(req,res) => {
   try{
@@ -120,6 +156,14 @@ exports.addComment =async(req,res) => {
     if (!updatedPost) {
       return res.status(404).json({ error: 'Post not found' });
     }
+
+    const notification = new Notification({
+      userId: updatedPost.userId, // Assuming `userId` is the post owner
+      message: `${user} commented on your post.`,
+      type: "Post_Commented",
+      link: `/posts/${postId}`, // Assuming there's a route to view the post
+    });
+    await notification.save();
 
     // Send the updated post back as JSON response
     res.status(201).json(updatedPost);
