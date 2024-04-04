@@ -117,6 +117,7 @@ const logout = async (req, res) => {
 
 // Add the googleAuth function
 const googleAuth = async (req, res) => {
+  console.log('Google auth endpoint hit', req.body);
   const { email, name, providerId } = req.body;
 
   // Check if user exists
@@ -132,7 +133,6 @@ const googleAuth = async (req, res) => {
     });
     await user.save();
   }
-  await userLoggedIn(user._id);
 
   // JWT token creation
   const token = jwt.sign({ userId: user.userId }, process.env.JWT_SECRET, {
@@ -143,6 +143,7 @@ const googleAuth = async (req, res) => {
 };
 
 const facebookAuth = async (req, res) => {
+  console.log('Facebook auth endpoint hit', req.body);
   try {
     const { email, name, providerId } = req.body;
 
