@@ -41,9 +41,7 @@ mongoose.connection.on("disconnected", () => {
   console.log("Disconnected from MongoDB");
 });
 
-app.use(cors({
-  origin: 'https://main--connectsport.netlify.app'
-}));
+app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use("/", loginRouter);
