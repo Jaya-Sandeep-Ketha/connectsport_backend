@@ -161,7 +161,7 @@ exports.addComment =async(req,res) => {
       userId: updatedPost.userId, // Assuming `userId` is the post owner
       message: `${user} commented on your post.`,
       type: "Post_Commented",
-      link: `/posts/${postId}`, // Assuming there's a route to view the post
+      link: '', // Assuming there's a route to view the post
     });
     await notification.save();
 
