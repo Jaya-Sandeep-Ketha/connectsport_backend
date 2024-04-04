@@ -1,6 +1,7 @@
 const Page = require('../model/page');
 const Notification = require('../model/Notification'); // Assuming this exists
 const Posts=require('../model/Posts');
+const Network=require('../model/Network');
 
 // Fetch all pages
 exports.getPages = async (req, res) => {
@@ -88,6 +89,46 @@ exports.follow_unfollow = async (req, res) => {
   }
 };
 
+exports.sharePage = async (req, res) => {
+  const { userId, pageId } = req.body;
+  console.log("Request to share page received", { userId, pageId }); // Log incoming request data
+
+  const baseURL = process.env.FRONTEND_APP_URL || 'https://yourapp.com'; 
+  const pageUrl = `${baseURL}/pages/${pageId}`;
+  console.log("Constructed page URL:", pageUrl); // Log the constructed URL
+
+  try {
+    const page = await Page.findById(pageId);
+    if (!page) {
+      console.log("Page not found for ID:", pageId); // Log when page is not found
+      return res.status(404).send({ message: 'Page not found' });
+    }
+
+    const userNetwork = await Network.findOne({ userId: userId });
+    if (!userNetwork || !userNetwork.friends || userNetwork.friends.length === 0) {
+      console.log("No friends or network found for user:", userId); // Log when no network/friends found
+      return res.status(404).send({ message: 'No friends to share with or network not found' });
+    }
+
+    console.log("Sharing with friends:", userNetwork.friends); // Log the friends list
+    await Promise.all(userNetwork.friends.map(async (friendId) => {
+      console.log("Creating notification for friend ID:", friendId); // Log the friend ID being notified
+      const notification = new Notification({
+        userId: friendId,
+        message: `Your friend ${userId} shared a page with you. Click here to view: ${pageUrl}`,
+        type: "Page_Shared",
+        link: pageUrl,
+      });
+      await notification.save();
+    }));
+
+    console.log("Page shared successfully with all friends.");
+    res.status(200).send({ message: 'Page shared successfully with friends.' });
+  } catch (error) {
+    console.error('Error sharing page with friends:', error);
+    res.status(500).send({ message: 'Failed to share the page with friends', error: error.message });
+  }
+};
 
 
 // Post content and notify followers
