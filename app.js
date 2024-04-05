@@ -40,13 +40,6 @@ mongoose.connection.on("error", (err) => {
 mongoose.connection.on("disconnected", () => {
   console.log("Disconnected from MongoDB");
 });
-
-<<<<<<< HEAD
-// app.use(cors({
-//   origin: 'https://main--connectsport.netlify.app'
-// }));
-=======
->>>>>>> 2a189dd938030823ebea7fd8037ff292c4022698
 app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
