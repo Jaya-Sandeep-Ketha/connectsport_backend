@@ -1,6 +1,7 @@
 // controllers/notificationsController.js
 const Notification = require('../model/Notification');
 const User = require('../model/User'); // Import the User model
+const mongoose = require('mongoose');
 
 exports.fetchNotifications = async (req, res) => {
     try {
@@ -35,16 +36,24 @@ exports.markNotificationAsRead = async (req, res) => {
 exports.deleteNotification = async (req, res) => {
     try {
         const { userId, notificationId } = req.body;
-        await Notification.deleteOne({ _id: notificationId, userId: userId });
+
+        // Logging the received values and their types for debugging
+        console.log(`Received userId: ${userId}, Type: ${typeof userId}`);
+        console.log(`Received notificationId: ${notificationId}, Type: ${typeof notificationId}`);
+
+        // Correctly converting string to ObjectId
+        const convertedNotificationId = new mongoose.Types.ObjectId(notificationId);
+
+        await Notification.deleteOne({ _id: convertedNotificationId, userId: userId });
+        
         res.status(204).send();
     } catch (error) {
+        console.error("Error removing notification:", error); // More descriptive error logging
         res.status(500).json({ message: error.message });
     }
 };
 
-
 // Assuming Notification schema includes 'userId', 'message', and 'type'
-
 exports.createNotification = async (userId, message, type, link = '') => {
     try {
         const notification = new Notification({

@@ -2,6 +2,7 @@ const { createNotification } = require("./notificationsController");
 const Group = require("../model/group");
 const Message = require("../model/Message");
 const Network = require("../model/Network");
+const Notification = require('../model/Notification');
 
 // Fetch all groups the current user is a part of
 exports.getGroups = async (req, res) => {
@@ -35,10 +36,6 @@ exports.createGroups = async (req, res) => {
         );
       })
     );
-
-
-
-
     res.status(201).json(newGroup);
   } catch (error) {
     console.error("Error creating new group:", error);
@@ -106,6 +103,26 @@ exports.addMember = async (req, res) => {
     group.members.push(userId);
     await group.save();
 
+    // Notification for the added member
+    let notification = new Notification({
+      userId, // The new member
+      message: `You have been added to ${groupId} group.`,
+      type: "Group_Addition",
+      link: '', // Assuming a route to view the group
+    });
+    await notification.save();
+
+    // Optionally, notify all group members about the new member (excluding the new member)
+    group.members.filter(memberId => memberId !== userId).forEach(async (memberId) => {
+      notification = new Notification({
+        userId: memberId, // Existing group member
+        message: `A new member has been added to ${groupId} group.`,
+        type: "Group_New_Member",
+        link: '', // Assuming a route to view the group
+      });
+      await notification.save();
+    });
+
     res.json(group);
   } catch (error) {
     console.error("Error adding user to group:", error);
@@ -118,7 +135,6 @@ exports.removeMember = async (req, res) => {
   const { groupName } = req.params;
   const { userId } = req.body;
   try {
-    // Note: Assuming 'name' is the correct field for group's name. Replace 'name' with the correct field if different.
     const group = await Group.findOne({ name: groupName }); // Corrected line here
     if (!group) {
       return res.status(404).send("Group not found");
@@ -127,7 +143,6 @@ exports.removeMember = async (req, res) => {
     if (!group.members.includes(userId)) {
       return res.status(400).send("User not a member of the group");
     }
-
     group.members = group.members.filter((member) => member !== userId);
     await group.save();
     res.json(group);
