@@ -12,30 +12,92 @@ cloudinary.config({
 });
 
 
-exports.home = async(req,res)=>{
-    try {
-        const userId = req.userId; // Extracted from JWT token
-        const userPosts = await Posts.find({ userId: userId }).sort({ createdAt: -1 });
-        const userNetwork=await Network.find({userId: userId});
-        let FriendPost=[];
-        let userFriendsPosts=[]
-        if(userNetwork && userNetwork[0].friends.length>0){
-          const friends=userNetwork[0].friends;
-          for(let i=0;i<friends.length;i++)
-          {
-            FriendPost=await Posts.find({userId:friends[i]}).sort({createdAt:-1});
-            if(FriendPost!=[]){
-              userFriendsPosts=userFriendsPosts.concat(FriendPost);
-            }
-          }
-        }
-        const allPosts=[...userPosts, ...userFriendsPosts]
-        res.json(allPosts);
-    } catch (error) {
-        console.error('Error fetching user posts:', error);
-        res.status(500).json({ error: 'Internal server error' });
-    }
-}
+// exports.home = async(req,res)=>{
+//     try {
+//         const userId = req.userId; // Extracted from JWT token
+//         const userPosts = await Posts.find({ userId: userId }).sort({ createdAt: -1 });
+//         const userNetwork=await Network.find({userId: userId});
+//         let FriendPost=[];
+//         let userFriendsPosts=[]
+//         let userFollowedPagesPosts = [];
+
+//         if(userNetwork && userNetwork[0].friends.length>0){
+//           const friends=userNetwork[0].friends;
+//           for(let i=0;i<friends.length;i++)
+//           {
+//             FriendPost=await Posts.find({userId:friends[i]}).sort({createdAt:-1});
+//             if(FriendPost!=[]){
+//               userFriendsPosts=userFriendsPosts.concat(FriendPost);
+//             }
+//           }
+//         }
+
+//         // Fetching posts from followed pages
+//         if (userNetwork && userNetwork.pages_following.length > 0) {
+//           const followedPages = userNetwork.pages_following;
+//           // Similarly using Promise.all for efficiency
+//           const pagesPostsPromises = followedPages.map(pageId =>
+//               Posts.find({ pageId: pageId }).sort({ createdAt: -1 })
+//           );
+//           const pagesPostsResults = await Promise.all(pagesPostsPromises);
+//           userFollowedPagesPosts = pagesPostsResults.flat(); // Flatten the array of posts arrays
+//       }
+
+//         const allPosts=[...userPosts, ...userFriendsPosts,  ...userFollowedPagesPosts];
+//         allPosts.sort((a, b) => b.createdAt - a.createdAt);
+//         res.json(allPosts);
+//     } catch (error) {
+//         console.error('Error fetching user posts:', error);
+//         res.status(500).json({ error: 'Internal server error' });
+//     }
+// }
+
+exports.home = async (req, res) => {
+  try {
+      const userId = req.userId; // Extracted from JWT token
+      // Fetching user's own posts
+      const userPosts = await Posts.find({ userId: userId }).sort({ createdAt: -1 });
+
+      // Initializing array to gather posts from friends and followed pages
+      let userFriendsPosts = [];
+      let userFollowedPagesPosts = [];
+
+      // Fetching user's network information (friends and followed pages)
+      const userNetwork = await Network.findOne({ userId: userId });
+
+      // Fetching friends' posts
+      if (userNetwork && userNetwork.friends.length > 0) {
+          const friends = userNetwork.friends;
+          // Using Promise.all to fetch all friends' posts concurrently for efficiency
+          const friendsPostsPromises = friends.map(friendId =>
+              Posts.find({ userId: friendId }).sort({ createdAt: -1 })
+          );
+          const friendsPostsResults = await Promise.all(friendsPostsPromises);
+          userFriendsPosts = friendsPostsResults.flat(); // Flatten the array of posts arrays
+      }
+
+      // Fetching posts from followed pages
+      if (userNetwork && userNetwork.pages_following.length > 0) {
+          const followedPages = userNetwork.pages_following;
+          // Similarly using Promise.all for efficiency
+          const pagesPostsPromises = followedPages.map(pageId =>
+              Posts.find({ userId: pageId }).sort({ createdAt: -1 })
+          );
+          const pagesPostsResults = await Promise.all(pagesPostsPromises);
+          userFollowedPagesPosts = pagesPostsResults.flat(); // Flatten the array of posts arrays
+      }
+
+      // Combining all posts
+      const allPosts = [...userPosts, ...userFriendsPosts, ...userFollowedPagesPosts];
+      // Optional: Sort allPosts by createdAt if needed
+      allPosts.sort((a, b) => b.createdAt - a.createdAt);
+
+      res.json(allPosts);
+  } catch (error) {
+      console.error('Error fetching user posts:', error);
+      res.status(500).json({ error: 'Internal server error' });
+  }
+};
 
 // Handle new post creation
 exports.addNewPost = async (req, res) => {
