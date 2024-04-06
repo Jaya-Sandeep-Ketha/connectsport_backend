@@ -6,6 +6,7 @@ const networkSchema = new mongoose.Schema({
     blocked: [{ type: String }],
     reqSent: [{ type: String }],
     reqReceived: [{ type: String }],
+    pages_following: [{ type: String }]
 }, {
     collection: "networks" // Collection names are typically lowercase
 });

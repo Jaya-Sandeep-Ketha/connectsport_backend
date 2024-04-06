@@ -64,9 +64,10 @@ exports.createPage = async (req, res) => {
 // Follow/Unfollow page endpoint
 exports.follow_unfollow = async (req, res) => {
   const { userId } = req.body;
+  const pageId = req.params.id;
 
   try {
-    const page = await Page.findById(req.params.id);
+    const page = await Page.findById(pageId);
     if (!page) {
       return res.status(404).send({ message: 'Page not found' });
     }
@@ -81,6 +82,24 @@ exports.follow_unfollow = async (req, res) => {
     }
 
     await page.save();
+
+    // Update Network model
+    let userNetwork = await Network.findOne({ userId: userId });
+    if (!userNetwork) {
+      userNetwork = new Network({ userId, pages_following: [] });
+    }
+
+    if (isFollowing) {
+      // If the user was following the page, remove it from their list
+      userNetwork.pages_following = userNetwork.pages_following.filter(pid => pid !== pageId);
+    } else {
+      // If the user was not following the page, add it to their list
+      if (!userNetwork.pages_following.includes(pageId)) {
+        userNetwork.pages_following.push(pageId);
+      }
+    }
+
+    await userNetwork.save();
 
     res.status(200).send({ 
       message: isFollowing ? 'Unfollowed successfully' : 'Followed successfully',
@@ -182,7 +201,8 @@ const transporter = nodemailer.createTransport({
 });
 
 exports.donate = async (req, res) => {
-  const { userId, pageId, amount, cardDetails } = req.body;
+  const { userId, pageId, cardDetails } = req.body;
+  let { amount } = req.body;
   console.log(`Processing donation from user ${userId} for page ${pageId} with amount ${amount}`);
 
   try {
@@ -198,13 +218,20 @@ exports.donate = async (req, res) => {
       return res.status(404).send({ message: 'Page not found' });
     }
 
+    // Convert amount to an integer
+    amount = parseInt(amount, 10);
+    // Validate conversion success
+    if (isNaN(amount)) {
+      console.error('Invalid donation amount:', amount);
+      return res.status(400).send({ message: 'Invalid donation amount' });
+    }
+
     console.log(`Adding donation to page ${pageId}. Current total before addition: ${page.totalDonations}`);
     page.donations = page.donations || [];
-    page.totalDonations = page.totalDonations || 0;
+    page.totalDonations = (parseInt(page.totalDonations, 10) || 0) + amount; // Ensure totalDonations is treated as an integer
 
     const donation = { username: user.userId, amount };
     page.donations.push(donation);
-    page.totalDonations += amount;
 
     await page.save();
     console.log(`Donation added. New total donations for page ${pageId}: ${page.totalDonations}`);
