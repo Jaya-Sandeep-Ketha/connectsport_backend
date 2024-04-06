@@ -51,6 +51,18 @@ const register = async (req, res) => {
     try {
       const user = new UserModel(userData);
       await user.save();
+
+      // Also add the user to the Networks model with all fields initialized as empty
+      const userNetwork = new Networks({
+        userId: user._id, // Assuming Networks model references UserModel via userId
+        friends: [], // Initialize friends as an empty array
+        blocked: [],
+        reqReceived: [],
+        reqSent: [],
+        pages_following: [], // Initialize pages_following as an empty array
+      });
+      await userNetwork.save();
+
       res.status(200).send("User registered successfully");
     } catch (error) {
       console.error("Registration failed:", error);
