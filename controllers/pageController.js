@@ -2,6 +2,8 @@ const Page = require('../model/page');
 const Notification = require('../model/Notification'); // Assuming this exists
 const Posts=require('../model/Posts');
 const Network=require('../model/Network');
+const UserModel = require('../model/User');
+const nodemailer = require('nodemailer');
 
 // Fetch all pages
 exports.getPages = async (req, res) => {
@@ -170,12 +172,57 @@ exports.getPosts = async (req, res) => {
   }
 };
 
+// Configure Nodemailer transporter
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: "connectsport17@gmail.com",
+    pass: "mikz brrc wcqo onvf",
+  },
+});
 
-
-
-
-// Donate endpoint (Mock)
 exports.donate = async (req, res) => {
-  // Redirect user to a mock payment portal or integrate with a real payment API
-  res.status(200).send({ message: 'Redirecting to payment...', paymentUrl: 'https://mockpayment.com' });
+  const { userId, pageId, amount, cardDetails } = req.body;
+  console.log(`Processing donation from user ${userId} for page ${pageId} with amount ${amount}`);
+
+  try {
+    const user = await UserModel.findOne({userId : userId});
+    const page = await Page.findById(pageId);
+
+    if (!user) {
+      console.error(`User ${userId} not found.`);
+      return res.status(404).send({ message: 'User not found' });
+    }
+    if (!page) {
+      console.error(`Page ${pageId} not found.`);
+      return res.status(404).send({ message: 'Page not found' });
+    }
+
+    console.log(`Adding donation to page ${pageId}. Current total before addition: ${page.totalDonations}`);
+    page.donations = page.donations || [];
+    page.totalDonations = page.totalDonations || 0;
+
+    const donation = { username: user.userId, amount };
+    page.donations.push(donation);
+    page.totalDonations += amount;
+
+    await page.save();
+    console.log(`Donation added. New total donations for page ${pageId}: ${page.totalDonations}`);
+
+    // Assuming transporter is defined earlier and configured properly
+    const mailOptions = {
+      from: 'yourEmail@gmail.com', // Replace with actual sender email
+      to: user.email,
+      subject: 'Donation Confirmation',
+      html: `<p>Thank you for your donation of $${amount} to ${page.title}.</p>`,
+    };
+
+    const emailResult = await transporter.sendMail(mailOptions);
+    console.log(`Email sent to ${user.email} with result:`, emailResult);
+
+    res.send({ message: 'Donation processed and confirmation email sent successfully.' });
+  } catch (error) {
+    console.error('Donation processing failed:', error);
+    res.status(500).send({ message: 'Failed to process donation', error });
+  }
 };

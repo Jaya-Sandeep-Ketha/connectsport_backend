@@ -1,10 +1,9 @@
 const mongoose = require('mongoose');
 
-const donorSchema = new mongoose.Schema({
-  userId: { type: String, ref: 'User' },
-  amount: Number,
-  donationDate: { type: Date, default: Date.now },
-}, { _id: false });
+const DonationSchema = new mongoose.Schema({
+  username: { type: String, required: true },
+  amount: { type: Number, required: true }
+});
 
 const pageSchema = new mongoose.Schema({
   title: { type: String, required: true },
@@ -17,7 +16,8 @@ const pageSchema = new mongoose.Schema({
   contactNumber: String, // Mobile number for contact
   createdBy: { type: String, ref: 'User', required: true },
   followers: [{ type: String, ref: 'User' }],
-  donors: [donorSchema],
+  donations: { type: [DonationSchema], default: [] },
+  totalDonations: { type: Number, default: 0 },
   createdAt: { type: Date, default: Date.now },
 });
 
