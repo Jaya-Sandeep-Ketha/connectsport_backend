@@ -7,6 +7,12 @@ const commentSchema = new Schema({
     createdAt: { type: Date, default: Date.now }
   });
 
+  const repostSchema = new Schema({
+    postId: { type: String, ref: "posts", required: true },
+    userId: { type: String, ref: "User", required: true },
+    createdAt: { type: Date, default: Date.now }
+  })
+
 const postSchema = new Schema({
 
   postTitle: { type: String, required: true },
@@ -21,7 +27,8 @@ url: {
     required: true
 } },
 likes:[{type:String,ref:"User"}],
-comments:[commentSchema]
+comments:[commentSchema],
+shared:[repostSchema]
 }, { timestamps: true }
 )
 

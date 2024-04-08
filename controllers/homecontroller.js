@@ -238,6 +238,7 @@ exports.addComment =async(req,res) => {
 }
 
 
+<<<<<<< HEAD
 exports.search = async (req, res) => {
   const { query, filter } = req.query;
   console.log(`Received search request with query: ${query} and filter: ${filter}`);
@@ -309,3 +310,22 @@ exports.profile = async (req, res) => {
     res.status(500).send('Server error');
   }
 };
+=======
+exports.handleShare = async(req,res) => {
+  try{
+    const user=req.params.user;
+    const postId=req.params.id; 
+    console.log("share");
+    const User= await Network.findOne({ userId: user });
+    if(!User){
+      return res.status(404).json({ error: 'User not found' });
+    }
+    const userFriends=User.friends;
+    res.status(201).json(userFriends);
+    }
+    catch(error){
+      console.error('Error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  }
+>>>>>>> 43d22f577b8b5b9aaad172ff4ffb4ef5458de354
