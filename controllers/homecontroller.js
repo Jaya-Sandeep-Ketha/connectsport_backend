@@ -238,7 +238,6 @@ exports.addComment =async(req,res) => {
 }
 
 
-<<<<<<< HEAD
 exports.search = async (req, res) => {
   const { query, filter } = req.query;
   console.log(`Received search request with query: ${query} and filter: ${filter}`);
@@ -281,7 +280,6 @@ exports.search = async (req, res) => {
     if (filter === 'All' || filter === 'Posts') {
       searchResults.posts = filter === 'All' ? results[2] : results[filter === 'Pages' ? 1 : 0];
     }
-
     res.json(searchResults);
   } catch (error) {
     console.error('Error searching for content', error);
@@ -310,7 +308,6 @@ exports.profile = async (req, res) => {
     res.status(500).send('Server error');
   }
 };
-=======
 exports.handleShare = async(req,res) => {
   try{
     const user=req.params.user;
@@ -328,4 +325,3 @@ exports.handleShare = async(req,res) => {
       res.status(500).json({ error: 'Internal server error' });
     }
   }
->>>>>>> 43d22f577b8b5b9aaad172ff4ffb4ef5458de354
