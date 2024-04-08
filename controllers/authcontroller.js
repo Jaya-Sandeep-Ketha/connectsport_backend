@@ -1,4 +1,5 @@
 const UserModel = require('../model/User');
+const NetworkModel=require('../model/Network');
 const jwt = require('jsonwebtoken');
 const emailValidator = require("email-validator");
 const bcrypt = require('bcrypt');
@@ -53,7 +54,7 @@ const register = async (req, res) => {
       await user.save();
 
       // Also add the user to the Networks model with all fields initialized as empty
-      const userNetwork = new Networks({
+      const userNetwork = new NetworkModel({
         userId: user._id, // Assuming Networks model references UserModel via userId
         friends: [], // Initialize friends as an empty array
         blocked: [],

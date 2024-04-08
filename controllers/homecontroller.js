@@ -235,3 +235,22 @@ exports.addComment =async(req,res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 }
+
+
+exports.handleShare = async(req,res) => {
+  try{
+    const user=req.params.user;
+    const postId=req.params.id; 
+    console.log("share");
+    const User= await Network.findOne({ userId: user });
+    if(!User){
+      return res.status(404).json({ error: 'User not found' });
+    }
+    const userFriends=User.friends;
+    res.status(201).json(userFriends);
+    }
+    catch(error){
+      console.error('Error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  }
