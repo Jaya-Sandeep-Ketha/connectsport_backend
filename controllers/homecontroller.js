@@ -246,6 +246,8 @@ exports.search = async (req, res) => {
     let searchPromises = [];
     let searchResults = { users: [], pages: [], posts: [] };
 
+    const searchPattern = new RegExp(query, 'i'); // Create a regex pattern for the search query
+
     if (filter === 'All' || filter === 'People') {
       console.log('Searching in Users...');
       searchPromises.push(
@@ -257,20 +259,29 @@ exports.search = async (req, res) => {
           })
       );
     }
+
     if (filter === 'All' || filter === 'Pages') {
       console.log('Searching in Pages...');
-      searchPromises.push(Page.find({ title: new RegExp(query, 'i') }).limit(5));
+      searchPromises.push(
+        Page.find({ title: searchPattern })
+          .limit(5)
+      );
     }
 
     if (filter === 'All' || filter === 'Posts') {
       console.log('Searching in Posts...');
-      searchPromises.push(Posts.find({ content: new RegExp(query, 'i') }).limit(5));
+      searchPromises.push(
+        Posts.find({
+          $or: [
+            { userId: searchPattern },
+            { postTitle: { $regex: searchPattern } } // Since tags is a single string
+          ]
+        }).limit(5)
+      );
     }
 
     const results = await Promise.all(searchPromises);
-    console.log('Search results:', results);
 
-    // Adjusting based on the assumption that the order of promises matches the order of filters
     if (filter === 'All' || filter === 'People') {
       searchResults.users = results[0];
     }
@@ -280,12 +291,15 @@ exports.search = async (req, res) => {
     if (filter === 'All' || filter === 'Posts') {
       searchResults.posts = filter === 'All' ? results[2] : results[filter === 'Pages' ? 1 : 0];
     }
+
+    console.log('Combined search results:', searchResults);
     res.json(searchResults);
   } catch (error) {
-    console.error('Error searching for content', error);
+    console.error('Error searching for content:', error);
     res.status(500).send('Error searching for content');
   }
 };
+
 
 exports.profile = async (req, res) => {
   const userId = req.params.userId; // this is the string representation of MongoDB's ObjectId
@@ -308,6 +322,7 @@ exports.profile = async (req, res) => {
     res.status(500).send('Server error');
   }
 };
+
 exports.handleShare = async(req,res) => {
   try{
     const user=req.params.user;
