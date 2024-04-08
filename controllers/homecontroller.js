@@ -251,11 +251,11 @@ exports.search = async (req, res) => {
     if (filter === 'All' || filter === 'People') {
       console.log('Searching in Users...');
       searchPromises.push(
-        User.find({ userId: new RegExp(query, 'i') })
-          .limit(5)
-          .then(results => {
-            console.log('User search results:', results);
-            return results;
+          User.find({
+            $or: [
+              { userId: new RegExp(query, 'i') },
+              { favoriteSports: new RegExp(query, 'i') } // Since tags is a single string
+            ]
           })
       );
     }
@@ -264,7 +264,6 @@ exports.search = async (req, res) => {
       console.log('Searching in Pages...');
       searchPromises.push(
         Page.find({ title: searchPattern })
-          .limit(5)
       );
     }
 
@@ -276,7 +275,7 @@ exports.search = async (req, res) => {
             { userId: searchPattern },
             { postTitle: { $regex: searchPattern } } // Since tags is a single string
           ]
-        }).limit(5)
+        })
       );
     }
 
