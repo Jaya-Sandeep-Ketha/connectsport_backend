@@ -8,7 +8,7 @@ homepageRouter.get('/posts', authenticateToken, home);
 homepageRouter.post('/newpost', authenticateToken, expressFormidable({maxFieldsSize:5*1024*1024}), addNewPost);
 homepageRouter.put('/:user/posts/:id/like', authenticateToken, handleLike);
 homepageRouter.put('/:user/posts/:id/comment', authenticateToken, addComment);
-homepageRouter.get('/:user/posts/:id/share', handleShare);
+homepageRouter.post('/:user/posts/:id/share', handleShare);
 // Uncomment and adjust the path as necessary for your model
 const users = require('../model/User');
 
@@ -29,8 +29,5 @@ homepageRouter.get('/search/users', async (req, res) => {
     }
 });
 
-// Remove the incorrect export statement
-// module.exports = router;
 
-// Correctly export homepageRouter
 module.exports = homepageRouter;

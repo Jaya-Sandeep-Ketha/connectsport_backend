@@ -68,10 +68,15 @@ exports.home = async (req, res) => {
       // Fetching friends' posts
       if (userNetwork && userNetwork.friends.length > 0) {
           const friends = userNetwork.friends;
+          console.log(friends);
           // Using Promise.all to fetch all friends' posts concurrently for efficiency
-          const friendsPostsPromises = friends.map(friendId =>
-              Posts.find({ userId: friendId }).sort({ createdAt: -1 })
-          );
+          const friendsPostsPromises = friends.map(async friendId =>{
+            const originalPosts = await Posts.find({ userId: friendId }).sort({ createdAt: -1 });
+            console.log(friendId);
+              const resharedPosts = await Posts.find({ 'shared.userId': friendId }).sort({ createdAt: -1 });
+              console.log(resharedPosts);
+              return [...originalPosts, ...resharedPosts];
+      });
           const friendsPostsResults = await Promise.all(friendsPostsPromises);
           userFriendsPosts = friendsPostsResults.flat(); // Flatten the array of posts arrays
       }
@@ -241,14 +246,31 @@ exports.handleShare = async(req,res) => {
   try{
     const user=req.params.user;
     const postId=req.params.id; 
-    console.log("share");
-    const User= await Network.findOne({ userId: user });
-    if(!User){
-      return res.status(404).json({ error: 'User not found' });
+    const post = await Posts.findById(postId);
+    if (!post) {
+      return res.status(404).json({ error: 'Post not found' });
     }
-    const userFriends=User.friends;
-    res.status(201).json(userFriends);
+    const alreadyShared = post.shared.some(item => item.userId === user);
+        if (alreadyShared) {
+            return res.status(400).json({ error: 'Post already shared by this user' });
+        }
+    const sharedPost = await Posts.findByIdAndUpdate(
+      postId,
+      { $addToSet: { shared: {userId:user }} },
+      { new: true }
+    );
+    if(!sharedPost){
+      return res.status(404).json({ error: 'Post not found' });
     }
+    const notification = new Notification({
+      userId: post.userId, // Assuming `userId` is the post owner
+      message: `${user} shared your post.`,
+      type: "Post_Shared",
+      link: '', // Assuming there's a route to view the post
+    });
+    await notification.save();
+    res.status(201).json(sharedPost);
+  }
     catch(error){
       console.error('Error:', error);
       res.status(500).json({ error: 'Internal server error' });
