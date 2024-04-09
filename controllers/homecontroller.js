@@ -1,4 +1,5 @@
 const User = require('../model/User');
+const Page = require('../model/page');
 const Posts=require('../model/Posts');
 const Network=require('../model/Network');
 const Notification = require('../model/Notification'); // Assuming this exists
@@ -241,6 +242,90 @@ exports.addComment =async(req,res) => {
   }
 }
 
+
+exports.search = async (req, res) => {
+  const { query, filter } = req.query;
+  console.log(`Received search request with query: ${query} and filter: ${filter}`);
+
+  try {
+    let searchPromises = [];
+    let searchResults = { users: [], pages: [], posts: [] };
+
+    const searchPattern = new RegExp(query, 'i'); // Create a regex pattern for the search query
+
+    if (filter === 'All' || filter === 'People') {
+      console.log('Searching in Users...');
+      searchPromises.push(
+          User.find({
+            $or: [
+              { userId: new RegExp(query, 'i') },
+              { favoriteSports: new RegExp(query, 'i') } // Since tags is a single string
+            ]
+          })
+      );
+    }
+
+    if (filter === 'All' || filter === 'Pages') {
+      console.log('Searching in Pages...');
+      searchPromises.push(
+        Page.find({ title: searchPattern })
+      );
+    }
+
+    if (filter === 'All' || filter === 'Posts') {
+      console.log('Searching in Posts...');
+      searchPromises.push(
+        Posts.find({
+          $or: [
+            { userId: searchPattern },
+            { postTitle: { $regex: searchPattern } } // Since tags is a single string
+          ]
+        })
+      );
+    }
+
+    const results = await Promise.all(searchPromises);
+
+    if (filter === 'All' || filter === 'People') {
+      searchResults.users = results[0];
+    }
+    if (filter === 'All' || filter === 'Pages') {
+      searchResults.pages = filter === 'All' ? results[1] : results[0];
+    }
+    if (filter === 'All' || filter === 'Posts') {
+      searchResults.posts = filter === 'All' ? results[2] : results[filter === 'Pages' ? 1 : 0];
+    }
+
+    console.log('Combined search results:', searchResults);
+    res.json(searchResults);
+  } catch (error) {
+    console.error('Error searching for content:', error);
+    res.status(500).send('Error searching for content');
+  }
+};
+
+
+exports.profile = async (req, res) => {
+  const userId = req.params.userId; // this is the string representation of MongoDB's ObjectId
+  console.log(`Fetching profile for userId: ${userId}`);
+
+  try {
+    // Assuming `userId` is the string representation of the ObjectId, use `_id` to fetch the details
+    const userDetails = await User.findById(userId, '-password'); // Excludes the password field
+    console.log(`User details found:`, userDetails);
+
+    if (!userDetails) {
+      console.log(`User not found with _id: ${userId}`);
+      return res.status(404).send('User not found');
+    }
+
+    res.json(userDetails);
+  } catch (error) {
+    // If there's an error, it could be due to an invalid ObjectId format
+    console.error(`Error fetching user profile for _id ${userId}:`, error);
+    res.status(500).send('Server error');
+  }
+};
 
 exports.handleShare = async(req,res) => {
   try{
