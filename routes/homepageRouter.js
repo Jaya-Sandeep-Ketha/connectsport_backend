@@ -10,6 +10,6 @@ homepageRouter.put('/:user/posts/:id/like', authenticateToken, handleLike);
 homepageRouter.put('/:user/posts/:id/comment', authenticateToken, addComment);
 homepageRouter.get('/search', search);
 homepageRouter.get('/user/:userId', profile);
-homepageRouter.get('/:user/posts/:id/share', handleShare);
+homepageRouter.get('/:user/posts/:id/share', authenticateToken,handleShare);
 
 module.exports = homepageRouter;
