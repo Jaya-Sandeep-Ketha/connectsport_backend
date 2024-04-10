@@ -84,52 +84,57 @@ const userLoggedOut = async (userId) => {
 const login = async (req, res) => {
   const { userId, password, recaptchaToken } = req.body;
 
-  // Validate data
   if (!userId || !password) {
     return res.status(400).send("Missing user ID or password");
   }
 
-  // CAPTCHA verification
-  try {
-    const recaptchaResponse = await axios.post(
-      `https://www.google.com/recaptcha/api/siteverify`,
-      null,
-      {
-        params: {
-          secret: process.env.RECAPTCHA_SECRET_KEY,
-          response: recaptchaToken,
-        },
-      }
-    );
-
-    if (!recaptchaResponse.data.success) {
-      console.log('CAPTCHA failed:', recaptchaResponse.data);
-      return res.status(400).send("CAPTCHA verification failed");
-    }
-  } catch (error) {
-    console.error("CAPTCHA verification error:", error);
-    return res.status(500).send("Server Error during CAPTCHA verification");
-  }
-
-  // User authentication
   try {
     const user = await UserModel.findOne({ userId: userId });
     if (!user) {
       return res.status(400).send("User not found");
     }
+
     const match = await bcrypt.compare(password, user.password);
     if (!match) {
       return res.status(400).send("Incorrect password");
+    }
+
+    // Check if CAPTCHA is required (i.e., the user is logging in for the first time after password reset)
+    if (user.passwordResetExpires && new Date() < new Date(user.passwordResetExpires)) {
+      if (!recaptchaToken) {
+        return res.status(400).send("CAPTCHA required");
+      }
+      
+      // Perform CAPTCHA verification
+      const recaptchaResponse = await axios.post(
+        `https://www.google.com/recaptcha/api/siteverify`,
+        null,
+        {
+          params: {
+            secret: process.env.RECAPTCHA_SECRET_KEY,
+            response: recaptchaToken,
+          },
+        }
+      );
+
+      if (!recaptchaResponse.data.success) {
+        console.log('CAPTCHA failed:', recaptchaResponse.data);
+        return res.status(400).send("CAPTCHA verification failed");
+      }
+
+      // Update the user document to clear the passwordResetExpires as CAPTCHA is verified
+      await UserModel.findOneAndUpdate({ userId: userId }, { $unset: { passwordResetExpires: "" } });
     }
 
     // JWT token creation
     const token = jwt.sign({ userId: user.userId }, process.env.JWT_SECRET, { expiresIn: "24h" });
     res.json({ message: "Login successful", token, userId: user.userId });
   } catch (error) {
-    console.error("Error during user authentication:", error);
+    console.error("Error during login:", error);
     res.status(500).send("Error during login");
   }
 };
+
 
 const logout = async (req, res) => {
   try {
