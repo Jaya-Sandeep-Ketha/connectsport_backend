@@ -1,136 +1,233 @@
-const UserModel = require('../model/User');
-const NetworkModel=require('../model/Network');
-const jwt = require('jsonwebtoken');
+const UserModel = require("../model/User");
+const NetworkModel = require("../model/Network");
+const jwt = require("jsonwebtoken");
 const emailValidator = require("email-validator");
-const bcrypt = require('bcrypt');
+const bcrypt = require("bcrypt");
+const axios = require('axios');
 
 const register = async (req, res) => {
-    const userData = req.body;
-  
-    // Validate data
-    if (
-        !userData.firstName ||
-        !userData.lastName ||
-        !userData.age ||
-        !userData.gender ||
-        !userData.email ||
-        !userData.userId ||
-        !userData.password ||
-        !userData.securityQuestion1 ||
-        !userData.securityQuestion2 ||
-        !userData.securityAnswer1 ||
-        !userData.securityAnswer2
-    ){
-      return res.status(400).send("Missing Details");
-    }
-    // Restructure security questions
+  const userData = req.body;
+
+  // Validate data
+  if (
+    !userData.firstName ||
+    !userData.lastName ||
+    !userData.age ||
+    !userData.gender ||
+    !userData.email ||
+    !userData.userId ||
+    !userData.password ||
+    !userData.securityQuestion1 ||
+    !userData.securityQuestion2 ||
+    !userData.securityAnswer1 ||
+    !userData.securityAnswer2
+  ) {
+    return res.status(400).send("Missing Details");
+  }
+  // Restructure security questions
   userData.securityQuestions = [
     { question: userData.securityQuestion1, answer: userData.securityAnswer1 },
-    { question: userData.securityQuestion2, answer: userData.securityAnswer2 }
+    { question: userData.securityQuestion2, answer: userData.securityAnswer2 },
   ];
   delete userData.securityQuestion1;
-  delete userData.securityAnswer1;  
+  delete userData.securityAnswer1;
   delete userData.securityQuestion2;
   delete userData.securityAnswer2;
 
-    // Validate email format
-    if (!emailValidator.validate(userData.email)) {
-      return res.status(400).send("Invalid email format");
-    }
-  
-    // Check if email is already registered
-    const emailExists = await UserModel.exists({ email: userData.email });
-    if (emailExists) {
-      return res.status(400).send("Email already registered");
-    }
-    // Check if username is already registered
-    const usernameExists = await UserModel.exists({ userId: userData.userId });
-    if (usernameExists) {
-      return res.status(400).send("Username not available");
-    }
-    // Save user to database
-    try {
-      const user = new UserModel(userData);
-      await user.save();
+  // Validate email format
+  if (!emailValidator.validate(userData.email)) {
+    return res.status(400).send("Invalid email format");
+  }
 
-      // Also add the user to the Networks model with all fields initialized as empty
-      const userNetwork = new NetworkModel({
-        userId: user._id, // Assuming Networks model references UserModel via userId
-        friends: [], // Initialize friends as an empty array
-        blocked: [],
-        reqReceived: [],
-        reqSent: [],
-        pages_following: [], // Initialize pages_following as an empty array
-      });
-      await userNetwork.save();
+  // Check if email is already registered
+  const emailExists = await UserModel.exists({ email: userData.email });
+  if (emailExists) {
+    return res.status(400).send("Email already registered");
+  }
+  // Check if username is already registered
+  const usernameExists = await UserModel.exists({ userId: userData.userId });
+  if (usernameExists) {
+    return res.status(400).send("Username not available");
+  }
+  // Save user to database
+  try {
+    const user = new UserModel(userData);
+    await user.save();
 
-      res.status(200).send("User registered successfully");
-    } catch (error) {
-      console.error("Registration failed:", error);
-      res.status(500).send("Registration failed");
-    }
+    // Also add the user to the Networks model with all fields initialized as empty
+    const userNetwork = new NetworkModel({
+      userId: userData.userId, // Assuming Networks model references UserModel via userId
+      friends: [], // Initialize friends as an empty array
+      blocked: [],
+      reqReceived: [],
+      reqSent: [],
+      pages_following: [], // Initialize pages_following as an empty array
+    });
+    await userNetwork.save();
+
+    res.status(200).send("User registered successfully");
+  } catch (error) {
+    console.error("Registration failed:", error);
+    res.status(500).send("Registration failed");
+  }
 };
 
 const userLoggedOut = async (userId) => {
   console.log(`Attempting to log out user with ID: ${userId}`);
-  await UserModel.findOneAndUpdate({ userId: userId }, { $set: { lastLogout: new Date() } });
+  await UserModel.findOneAndUpdate(
+    { userId: userId },
+    { $set: { lastLogout: new Date() } }
+  );
   console.log(`Successfully updated logout time for user with ID: ${userId}`);
 };
 
+// const login = async (req, res) => {
+//   const { userId, password, recaptchaToken } = req.body;
+
+//   if (!userId || !password) {
+//     return res.status(400).send("Missing user ID or password");
+//   }
+
+//   try {
+//     const user = await UserModel.findOne({ userId: userId });
+//     if (!user) {
+//       return res.status(400).send("User not found");
+//     }
+
+//     const match = await bcrypt.compare(password, user.password);
+//     if (!match) {
+//       return res.status(400).send("Incorrect password");
+//     }
+
+//     // Check if CAPTCHA is required (i.e., the user is logging in for the first time after password reset)
+//     if (user.passwordResetExpires && new Date() < new Date(user.passwordResetExpires)) {
+//       if (!recaptchaToken) {
+//         return res.status(400).send("CAPTCHA required");
+//       }
+      
+//       // Perform CAPTCHA verification
+//       const recaptchaResponse = await axios.post(
+//         `https://www.google.com/recaptcha/api/siteverify`,
+//         null,
+//         {
+//           params: {
+//             secret: process.env.RECAPTCHA_SECRET_KEY,
+//             response: recaptchaToken,
+//           },
+//         }
+//       );
+
+//       if (!recaptchaResponse.data.success) {
+//         console.log('CAPTCHA failed:', recaptchaResponse.data);
+//         return res.status(400).send("CAPTCHA verification failed");
+//       }
+
+//       // Update the user document to clear the passwordResetExpires as CAPTCHA is verified
+//       await UserModel.findOneAndUpdate({ userId: userId }, { $unset: { passwordResetExpires: "" } });
+//     }
+
+//     // JWT token creation
+//     const token = jwt.sign({ userId: user.userId }, process.env.JWT_SECRET, { expiresIn: "24h" });
+//     res.json({ message: "Login successful", token, userId: user.userId });
+//   } catch (error) {
+//     console.error("Error during login:", error);
+//     res.status(500).send("Error during login");
+//   }
+// };
+
 const login = async (req, res) => {
-  const { userId, password }= req.body;
-  // Validate data
+  console.log("Login request received", req.body); // Log the incoming request data
+
+  const { userId, password, recaptchaToken } = req.body;
+
   if (!userId || !password) {
+    console.log("Missing user ID or password");
     return res.status(400).send("Missing user ID or password");
   }
 
-  // Check if user exists and password is correct
   try {
     const user = await UserModel.findOne({ userId: userId });
+    console.log("User found:", !!user); // Log whether the user was found
+
     if (!user) {
-      return res.status(400).send("User not found");
-    }
-    const match = await bcrypt.compare(password, user.password);
-    if (!match) {
-      return res.status(400).send("Incorrect password");
+      return res.status(404).send("User not found");
     }
 
-    // JWT token creation
-    const token = jwt.sign({ userId: user.userId }, process.env.JWT_SECRET, {
-      expiresIn: "24h",
-    });
-    res.json({ message: "Login successful", token, userId: user.userId });
+    const requiresCaptcha = user.passwordResetExpires && new Date() < new Date(user.passwordResetExpires);
+    console.log("CAPTCHA required:", requiresCaptcha); // Log if CAPTCHA is 
+    
+    if (requiresCaptcha) {
+      if (!recaptchaToken) {
+        console.log('CAPTCHA required but no token provided');
+        return res.status(200).json({ message: "CAPTCHA required", captchaRequired: true });
+      }
+    }
+    if (requiresCaptcha) {
+      console.log("Verifying CAPTCHA with token:", recaptchaToken); // Log CAPTCHA token
+      const recaptchaResponse = await axios.post(
+        `https://www.google.com/recaptcha/api/siteverify`,
+        null,
+        {
+          params: {
+            secret: process.env.RECAPTCHA_SECRET_KEY,
+            response: recaptchaToken,
+          },
+        }
+      );
+
+      console.log("CAPTCHA verification result:", recaptchaResponse.data); // Log CAPTCHA verification result
+
+      if (!recaptchaResponse.data.success) {
+        return res.status(400).send("CAPTCHA verification failed");
+      }
+
+      await UserModel.findOneAndUpdate({ userId: userId }, { $unset: { passwordResetExpires: "" } });
+    }
+
+    const match = await bcrypt.compare(password, user.password);
+    console.log("Password match:", match); // Log if password matches
+
+    if (!match) {
+      return res.status(401).send("Incorrect password");
+    }
+
+    const token = jwt.sign({ userId: user.userId }, process.env.JWT_SECRET, { expiresIn: "24h" });
+    console.log("JWT token generated"); // Log token generation
+    res.json({ message: "Login successful", token, userId: user.userId, captchaRequired: requiresCaptcha });
   } catch (error) {
     console.error("Error during login:", error);
     res.status(500).send("Error during login");
   }
 };
 
+
+
+
 const logout = async (req, res) => {
   try {
-      const userId = req.body.userId; // Get userId from request body
-      console.log("Received request body:", req.body);
-      console.log(`Logout request received for user ID: ${userId}`);
+    const userId = req.body.userId; // Get userId from request body
+    console.log("Received request body:", req.body);
+    console.log(`Logout request received for user ID: ${userId}`);
 
-      // Validate userId presence
-      if (!userId) {
-          console.log("Logout attempt without a user ID");
-          return res.status(400).send("User ID is missing");
-      }
+    // Validate userId presence
+    if (!userId) {
+      console.log("Logout attempt without a user ID");
+      return res.status(400).send("User ID is missing");
+    }
 
-      // Update user's last logout time
-      await userLoggedOut(userId);
-      console.log(`Logout successful for user ID: ${userId}`);
-      res.send("Logout successful");
+    // Update user's last logout time
+    await userLoggedOut(userId);
+    console.log(`Logout successful for user ID: ${userId}`);
+    res.send("Logout successful");
   } catch (error) {
-      console.error("Error during logout:", error);
-      res.status(500).send("Error during logout");
+    console.error("Error during logout:", error);
+    res.status(500).send("Error during logout");
   }
 };
 
 // Add the googleAuth function
 const googleAuth = async (req, res) => {
-  console.log('Google auth endpoint hit', req.body);
+  console.log("Google auth endpoint hit", req.body);
   const { email, name, providerId } = req.body;
 
   // Check if user exists
@@ -156,7 +253,7 @@ const googleAuth = async (req, res) => {
 };
 
 const facebookAuth = async (req, res) => {
-  console.log('Facebook auth endpoint hit', req.body);
+  console.log("Facebook auth endpoint hit", req.body);
   try {
     const { email, name, providerId } = req.body;
 
