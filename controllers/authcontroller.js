@@ -82,14 +82,14 @@ const userLoggedOut = async (userId) => {
 
 const login = async (req, res) => {
   const { userId, password, recaptchaToken } = req.body;
+
   // Validate data
   if (!userId || !password) {
     return res.status(400).send("Missing user ID or password");
   }
 
-  // Check if user exists and password is correct
+  // CAPTCHA verification
   try {
-    // Verify CAPTCHA
     const recaptchaResponse = await axios.post(
       `https://www.google.com/recaptcha/api/siteverify`,
       null,
@@ -102,9 +102,16 @@ const login = async (req, res) => {
     );
 
     if (!recaptchaResponse.data.success) {
+      console.log('CAPTCHA failed:', recaptchaResponse.data);
       return res.status(400).send("CAPTCHA verification failed");
     }
-    
+  } catch (error) {
+    console.error("CAPTCHA verification error:", error);
+    return res.status(500).send("Server Error during CAPTCHA verification");
+  }
+
+  // User authentication
+  try {
     const user = await UserModel.findOne({ userId: userId });
     if (!user) {
       return res.status(400).send("User not found");
@@ -115,12 +122,10 @@ const login = async (req, res) => {
     }
 
     // JWT token creation
-    const token = jwt.sign({ userId: user.userId }, process.env.JWT_SECRET, {
-      expiresIn: "24h",
-    });
+    const token = jwt.sign({ userId: user.userId }, process.env.JWT_SECRET, { expiresIn: "24h" });
     res.json({ message: "Login successful", token, userId: user.userId });
   } catch (error) {
-    console.error("Error during login:", error);
+    console.error("Error during user authentication:", error);
     res.status(500).send("Error during login");
   }
 };
