@@ -361,3 +361,82 @@ exports.handleShare = async(req,res) => {
       res.status(500).json({ error: 'Internal server error' });
     }
   }
+
+
+  exports.addNewPoll = async (req, res) => {
+    try {
+      const userId = req.userId;
+      const { question, options} = req.fields;
+        // Example: Create a new post document with image data
+      const newPoll = new Polls({
+        question: question, // Convert to string if necessary
+        options: options,
+        createdBy: userId,
+        
+      });
+        // Save the new post
+        await newPoll.save();
+        // Find the current user
+      const currentUser = await Network.findOne({ userId: userId });
+  
+       // Check if the user exists
+       if (!currentUser) {
+        return res.status(404).json({ error: "User not found" });
+      }
+  
+      // Notify friends if they exist
+      if (currentUser.friends && currentUser.friends.length > 0) {
+        await Promise.all(currentUser.friends.map(async (friendId) => {
+          // Log the friend ID being notified
+          console.log("Creating notification for friend ID:", friendId);
+          
+          // Create and save a new notification
+          const notification = new Notification({
+            userId: friendId,
+            message: `Your friend ${userId} posted a poll.`,
+            type: "Poll_Posted",
+            link: '', // Assuming the front end can handle this route to direct users to the new post
+          });
+          await notification.save();
+        }));
+      }
+  
+      // Return the created post data in the response
+      res.status(201).json(newPoll);
+    } catch (error) {
+      console.error('Error creating new poll:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  };
+
+
+  exports.handleVote =async(req,res) => {
+    try{
+      const userId = req.userId;
+      const pollId=req.params.id;    
+      const { content } = req.body;
+      const updatedPost= await Posts.findByIdAndUpdate(pollId,{
+        $push:{comments:{ content, commenter:user }}
+      },{
+        new:true
+      });
+      if (!updatedPost) {
+        return res.status(404).json({ error: 'Post not found' });
+      }
+  
+      const notification = new Notification({
+        userId: updatedPost.userId, // Assuming `userId` is the post owner
+        message: `${user} commented on your post.`,
+        type: "Post_Commented",
+        link: '', // Assuming there's a route to view the post
+      });
+      await notification.save();
+  
+      // Send the updated post back as JSON response
+      res.status(201).json(updatedPost);
+    }
+    catch(error){
+      console.error('Error updating post:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  }
