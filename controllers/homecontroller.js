@@ -517,7 +517,4 @@ exports.handleShare = async (req, res) => {
       console.error('Error updating post:', error);
       res.status(500).json({ error: 'Internal server error' });
     }
-  }
-=======
-};
->>>>>>> refs/remotes/origin/main
+  };
