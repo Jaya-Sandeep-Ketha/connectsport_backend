@@ -433,25 +433,19 @@ exports.handleShare = async (req, res) => {
     console.error("Error:", error);
     res.status(500).json({ error: "Internal server error" });
   }
-<<<<<<< HEAD
-    catch(error){
-      console.error('Error:', error);
-      res.status(500).json({ error: 'Internal server error' });
-    }
-  }
+  };
 
 
   exports.addNewPoll = async (req, res) => {
     try {
       const userId = req.userId;
-      const { question, options} = req.fields;
+      const { question, options } = req.fields;
         // Example: Create a new post document with image data
-      const newPoll = new Polls({
-        question: question, // Convert to string if necessary
-        options: options,
-        createdBy: userId,
-        
-      });
+        const newPoll = new Polls({
+          question: question,
+          options: options.map(option => ({ text: option, voters: [] })), // Adjusted according to provided structure
+          createdBy: userId,
+        });
         // Save the new post
         await newPoll.save();
         // Find the current user
@@ -492,10 +486,11 @@ exports.handleShare = async (req, res) => {
     try{
       const userId = req.userId;
       const pollId=req.params.id;    
-      const { content } = req.body;
+      const { text } = req.body;
       const updatedPost= await Posts.findByIdAndUpdate(pollId,{
-        $push:{comments:{ content, commenter:user }}
-      },{
+          $push:{options:{ text, voters:[{userId}] }}
+      }
+      ,{
         new:true
       });
       if (!updatedPost) {
@@ -504,8 +499,8 @@ exports.handleShare = async (req, res) => {
   
       const notification = new Notification({
         userId: updatedPost.userId, // Assuming `userId` is the post owner
-        message: `${user} commented on your post.`,
-        type: "Post_Commented",
+        message: `${user} voted on your poll.`,
+        type: "Poll_Voted",
         link: '', // Assuming there's a route to view the post
       });
       await notification.save();
@@ -514,7 +509,7 @@ exports.handleShare = async (req, res) => {
       res.status(201).json(updatedPost);
     }
     catch(error){
-      console.error('Error updating post:', error);
+      console.error('Error updating poll:', error);
       res.status(500).json({ error: 'Internal server error' });
     }
   };
