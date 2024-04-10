@@ -84,10 +84,10 @@ const userLoggedOut = async (userId) => {
 const login = async (req, res) => {
   const { userId, password, recaptchaToken } = req.body;
 
+  // Validate data
   if (!userId || !password) {
     return res.status(400).send("Missing user ID or password");
   }
-
   try {
     const user = await UserModel.findOne({ userId: userId });
     if (!user) {
@@ -104,7 +104,7 @@ const login = async (req, res) => {
       if (!recaptchaToken) {
         return res.status(400).send("CAPTCHA required");
       }
-      
+
       // Perform CAPTCHA verification
       const recaptchaResponse = await axios.post(
         `https://www.google.com/recaptcha/api/siteverify`,
@@ -134,7 +134,6 @@ const login = async (req, res) => {
     res.status(500).send("Error during login");
   }
 };
-
 
 const logout = async (req, res) => {
   try {
@@ -221,4 +220,5 @@ module.exports = {
   register,
   googleAuth,
   facebookAuth,
+  captcha,
 };
