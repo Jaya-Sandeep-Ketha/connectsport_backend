@@ -55,7 +55,7 @@ const register = async (req, res) => {
 
       // Also add the user to the Networks model with all fields initialized as empty
       const userNetwork = new NetworkModel({
-        userId: user._id, // Assuming Networks model references UserModel via userId
+        userId: userData.userId, // Assuming Networks model references UserModel via userId
         friends: [], // Initialize friends as an empty array
         blocked: [],
         reqReceived: [],
