@@ -136,20 +136,34 @@ const userLoggedOut = async (userId) => {
 // };
 
 const login = async (req, res) => {
+  console.log("Login request received", req.body); // Log the incoming request data
+
   const { userId, password, recaptchaToken } = req.body;
 
   if (!userId || !password) {
+    console.log("Missing user ID or password");
     return res.status(400).send("Missing user ID or password");
   }
 
   try {
     const user = await UserModel.findOne({ userId: userId });
+    console.log("User found:", !!user); // Log whether the user was found
+
     if (!user) {
       return res.status(404).send("User not found");
     }
 
     const requiresCaptcha = user.passwordResetExpires && new Date() < new Date(user.passwordResetExpires);
+    console.log("CAPTCHA required:", requiresCaptcha); // Log if CAPTCHA is 
+    
     if (requiresCaptcha) {
+      if (!recaptchaToken) {
+        console.log('CAPTCHA required but no token provided');
+        return res.status(200).json({ message: "CAPTCHA required", captchaRequired: true });
+      }
+    }
+    if (requiresCaptcha) {
+      console.log("Verifying CAPTCHA with token:", recaptchaToken); // Log CAPTCHA token
       const recaptchaResponse = await axios.post(
         `https://www.google.com/recaptcha/api/siteverify`,
         null,
@@ -161,8 +175,9 @@ const login = async (req, res) => {
         }
       );
 
+      console.log("CAPTCHA verification result:", recaptchaResponse.data); // Log CAPTCHA verification result
+
       if (!recaptchaResponse.data.success) {
-        console.log('CAPTCHA failed:', recaptchaResponse.data);
         return res.status(400).send("CAPTCHA verification failed");
       }
 
@@ -170,18 +185,21 @@ const login = async (req, res) => {
     }
 
     const match = await bcrypt.compare(password, user.password);
+    console.log("Password match:", match); // Log if password matches
+
     if (!match) {
       return res.status(401).send("Incorrect password");
     }
 
-    // JWT token creation
     const token = jwt.sign({ userId: user.userId }, process.env.JWT_SECRET, { expiresIn: "24h" });
-    res.json({ message: "Login successful", token, userId: user.userId });
+    console.log("JWT token generated"); // Log token generation
+    res.json({ message: "Login successful", token, userId: user.userId, captchaRequired: requiresCaptcha });
   } catch (error) {
     console.error("Error during login:", error);
     res.status(500).send("Error during login");
   }
 };
+
 
 
 
