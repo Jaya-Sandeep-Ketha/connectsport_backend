@@ -3,6 +3,7 @@ const NetworkModel = require("../model/Network");
 const jwt = require("jsonwebtoken");
 const emailValidator = require("email-validator");
 const bcrypt = require("bcrypt");
+const axios = require('axios');
 
 const register = async (req, res) => {
   const userData = req.body;
