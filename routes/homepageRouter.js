@@ -11,7 +11,7 @@ homepageRouter.put('/:user/posts/:id/comment', authenticateToken, addComment);
 homepageRouter.get('/search', search);
 homepageRouter.get('/user/:userId', profile);
 homepageRouter.get('/:user/posts/:id/share', authenticateToken,handleShare);
-homepageRouter.post('/newpoll',authenticateToken,expressFormidable(), addNewPoll);
+homepageRouter.post('/newpoll',authenticateToken, addNewPoll);
 homepageRouter.put('/:user/polls/:id/vote', authenticateToken, handleVote);
 
 module.exports = homepageRouter;

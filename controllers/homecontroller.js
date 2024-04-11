@@ -2,6 +2,7 @@ const User = require("../model/User");
 const Page = require("../model/page");
 const Posts = require("../model/Posts");
 const Network = require("../model/Network");
+const Polls = require("../model/Polls");
 const Notification = require("../model/Notification"); // Assuming this exists
 const fs = require("fs");
 const cloudinary = require("cloudinary");
@@ -437,9 +438,14 @@ exports.handleShare = async (req, res) => {
 
 
   exports.addNewPoll = async (req, res) => {
+    console.log("Received request for addNewPoll"); 
     try {
       const userId = req.userId;
-      const { question, options } = req.fields;
+      console.log("UserID from request:", userId);
+      // const { question, options } = req.fields;
+      const { question, options } = req.body;
+      console.log("Request body:", req.body);
+      // console.log("Request fields:", req.fields);
         // Example: Create a new post document with image data
         const newPoll = new Polls({
           question: question,
@@ -448,6 +454,7 @@ exports.handleShare = async (req, res) => {
         });
         // Save the new post
         await newPoll.save();
+        console.log("New poll saved:", newPoll); // Log the newly created poll
         // Find the current user
       const currentUser = await Network.findOne({ userId: userId });
   
