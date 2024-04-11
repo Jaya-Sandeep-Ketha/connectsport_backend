@@ -436,7 +436,6 @@ exports.handleShare = async (req, res) => {
   }
   };
 
-
   exports.addNewPoll = async (req, res) => {
     console.log("Received request for addNewPoll"); 
     try {
@@ -489,34 +488,94 @@ exports.handleShare = async (req, res) => {
   };
 
 
-  exports.handleVote =async(req,res) => {
-    try{
-      const userId = req.userId;
-      const pollId=req.params.id;    
-      const { text } = req.body;
-      const updatedPost= await Posts.findByIdAndUpdate(pollId,{
-          $push:{options:{ text, voters:[{userId}] }}
-      }
-      ,{
-        new:true
-      });
-      if (!updatedPost) {
-        return res.status(404).json({ error: 'Post not found' });
+  exports.getPolls = async (req, res) => {
+    try {
+      // Assuming you want to fetch all polls or implement some logic to select specific ones
+      const polls = await Polls.find().sort({ createdAt: -1 });
+      res.json(polls);
+    } catch (error) {
+      console.error('Error fetching polls:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  };
+
+
+  // exports.handleVote =async(req,res) => {
+  //   try{
+  //     const userId = req.userId;
+  //     const pollId=req.params.id;    
+  //     const { text } = req.body;
+  //     const updatedPost= await Posts.findByIdAndUpdate(pollId,{
+  //         $push:{options:{ text, voters:[{userId}] }}
+  //     }
+  //     ,{
+  //       new:true
+  //     });
+  //     if (!updatedPost) {
+  //       return res.status(404).json({ error: 'Post not found' });
+  //     }
+  
+  //     const notification = new Notification({
+  //       userId: updatedPost.userId, // Assuming `userId` is the post owner
+  //       message: `${user} voted on your poll.`,
+  //       type: "Poll_Voted",
+  //       link: '', // Assuming there's a route to view the post
+  //     });
+  //     await notification.save();
+  
+  //     // Send the updated post back as JSON response
+  //     res.status(201).json(updatedPost);
+  //   }
+  //   catch(error){
+  //     console.error('Error updating poll:', error);
+  //     res.status(500).json({ error: 'Internal server error' });
+  //   }
+  // };
+
+  exports.handleVote = async (req, res) => {
+    try {
+      const userId = req.userId; // Make sure this is being set correctly by your authentication middleware
+      const pollId = req.params.id;
+      const { text } = req.body; // Ensure this matches what's being sent by the client
+  
+      // First, find the poll to ensure it exists and get the option to update
+      const poll = await Polls.findById(pollId);
+      if (!poll) {
+        return res.status(404).json({ error: 'Poll not found' });
       }
   
+      // Find the index of the option to be updated
+      const optionIndex = poll.options.findIndex(option => option.text === text);
+      if (optionIndex === -1) {
+        return res.status(404).json({ error: 'Option not found' });
+      }
+  
+      // Update the voters array for the specific option
+      const updatedPoll = await Polls.findOneAndUpdate(
+        { _id: pollId, 'options.text': text },
+        { $push: { [`options.${optionIndex}.voters`]: userId } },
+        { new: true }
+      );
+  
+      // You should have a user variable that contains the name of the user that voted
+      // If you don't have the user's name, you'll need to fetch it from the database or adjust your notification message
+      const user = "The user's name"; // Placeholder, replace with actual user name retrieval logic
+  
+      // Create the notification
       const notification = new Notification({
-        userId: updatedPost.userId, // Assuming `userId` is the post owner
+        userId: userId, // Assuming `userId` is the ID of the user who voted
         message: `${user} voted on your poll.`,
         type: "Poll_Voted",
-        link: '', // Assuming there's a route to view the post
+        link: '', // Provide a link to the poll if you have one
       });
       await notification.save();
   
-      // Send the updated post back as JSON response
-      res.status(201).json(updatedPost);
+      // Send the updated poll back as a JSON response
+      res.status(200).json(updatedPoll);
     }
     catch(error){
       console.error('Error updating poll:', error);
       res.status(500).json({ error: 'Internal server error' });
     }
   };
+  
