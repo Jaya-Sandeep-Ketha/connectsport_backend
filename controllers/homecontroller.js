@@ -107,79 +107,90 @@ cloudinary.config({
 
 exports.home = async (req, res) => {
   try {
-      const userId = req.userId; // Extracted from JWT token
-      // Fetching user's own posts
-      const userPosts = await Posts.find({ userId: userId }).sort({ createdAt: -1 });
+    const userId = req.userId; // Extracted from JWT token
+    // Fetching user's own posts
+    const userPosts = await Posts.find({ userId: userId }).sort({
+      createdAt: -1,
+    });
 
-      // Initializing array to gather posts from friends and followed pages
-      let userFriendsPosts = [];
-      let userFollowedPagesPosts = [];
+    // Initializing array to gather posts from friends and followed pages
+    let userFriendsPosts = [];
+    let userFollowedPagesPosts = [];
 
-      // Fetching user's network information (friends and followed pages)
-      const userNetwork = await Network.findOne({ userId: userId });
+    // Fetching user's network information (friends and followed pages)
+    const userNetwork = await Network.findOne({ userId: userId });
 
-      // Fetching user's preferences
-      const currentUser = await User.findOne({userId: userId});
-      const favoriteSports = currentUser.favoriteSports || [];
+    // Fetching user's preferences
+    const currentUser = await User.findOne({ userId: userId });
+    const favoriteSports = currentUser.favoriteSports || [];
 
-      // Fetching friends' posts
-      if (userNetwork && userNetwork.friends.length > 0) {
-          const friends = userNetwork.friends;
-          console.log(friends);
-          // Using Promise.all to fetch all friends' posts concurrently for efficiency
-          const friendsPostsPromises = friends.map(async friendId =>{
-            const originalPosts = await Posts.find({ userId: friendId }).sort({ createdAt: -1 });
-            console.log(friendId);
-              const resharedPosts = await Posts.find({ 'shared.userId': friendId }).sort({ createdAt: -1 });
-              console.log(resharedPosts);
-              return [...originalPosts, ...resharedPosts];
+    // Fetching friends' posts
+    if (userNetwork && userNetwork.friends.length > 0) {
+      const friends = userNetwork.friends;
+      // Using Promise.all to fetch all friends' posts concurrently for efficiency
+      const friendsPostsPromises = friends.map(async (friendId) => {
+        const originalPosts = await Posts.find({ userId: friendId }).sort({
+          createdAt: -1,
+        });
+        const resharedPosts = await Posts.find({
+          "shared.userId": friendId,
+        }).sort({ createdAt: -1 });
+        return [...originalPosts, ...resharedPosts];
       });
-          const friendsPostsResults = await Promise.all(friendsPostsPromises);
-          userFriendsPosts = friendsPostsResults.flat(); // Flatten the array of posts arrays
-      }
+      const friendsPostsResults = await Promise.all(friendsPostsPromises);
+      userFriendsPosts = friendsPostsResults.flat(); // Flatten the array of posts arrays
+    }
 
-      // Fetching posts from followed pages
-      if (userNetwork && userNetwork.pages_following.length > 0) {
-          const followedPages = userNetwork.pages_following;
-          // Similarly using Promise.all for efficiency
-          const pagesPostsPromises = followedPages.map(pageId =>
-              Posts.find({ userId: pageId }).sort({ createdAt: -1 })
-          );
-          const pagesPostsResults = await Promise.all(pagesPostsPromises);
-          userFollowedPagesPosts = pagesPostsResults.flat(); // Flatten the array of posts arrays
-      }
+    // Fetching posts from followed pages
+    if (userNetwork && userNetwork.pages_following.length > 0) {
+      const followedPages = userNetwork.pages_following;
+      // Similarly using Promise.all for efficiency
+      const pagesPostsPromises = followedPages.map((pageId) =>
+        Posts.find({ userId: pageId }).sort({ createdAt: -1 })
+      );
+      const pagesPostsResults = await Promise.all(pagesPostsPromises);
+      userFollowedPagesPosts = pagesPostsResults.flat(); // Flatten the array of posts arrays
+    }
 
-      // Combining all posts
-      let allPosts = [...userPosts, ...userFriendsPosts, ...userFollowedPagesPosts];
-      // Enhancing the sorting logic to balance preference and recency
-      const now = new Date();
-      allPosts = allPosts.map(post => {
-          const ageInDays = (now - new Date(post.createdAt)) / (1000 * 60 * 60 * 24);
-          const preferenceScore = favoriteSports.includes(post.postTitle) ? 100 : 0; // Preference weight
-          const recencyScore = Math.max(0, 30 - ageInDays); // Recency weight, loses value after 30 days
-          const totalScore = preferenceScore + recencyScore;
-          console.log(`Post ID: ${post._id}, Preference Score: ${preferenceScore}, Recency Score: ${recencyScore}, Total Score: ${totalScore}`);
-          return {
-              ...post._doc,
-              score: totalScore
-          };
-      }).sort((a, b) => b.score - a.score); // Sort by total score
+    // Combining all posts
+    let allPosts = [
+      ...userPosts,
+      ...userFriendsPosts,
+      ...userFollowedPagesPosts,
+    ];
+    // Enhancing the sorting logic to balance preference and recency
+    const now = new Date();
+    allPosts = allPosts
+      .map((post) => {
+        const ageInDays =
+          (now - new Date(post.createdAt)) / (1000 * 60 * 60 * 24);
+        const preferenceScore = favoriteSports.includes(post.postTitle)
+          ? 100
+          : 0; // Preference weight
+        const recencyScore = Math.max(0, 30 - ageInDays); // Recency weight, loses value after 30 days
+        const totalScore = preferenceScore + recencyScore;
+        return {
+          ...post._doc,
+          score: totalScore,
+        };
+      })
+      .sort((a, b) => b.score - a.score); // Sort by total score
 
-      res.json(allPosts.map(post => {
-          delete post.score; // Remove score from the response if not needed externally
-          return post;
-      }));
+    res.json(
+      allPosts.map((post) => {
+        delete post.score; // Remove score from the response if not needed externally
+        return post;
+      })
+    );
   } catch (error) {
-      console.error('Error fetching user posts:', error);
-      res.status(500).json({ error: 'Internal server error' });
+    console.error("Error fetching user posts:", error);
+    res.status(500).json({ error: "Internal server error" });
   }
 };
 
 // Handle new post creation
 exports.addNewPost = async (req, res) => {
-  console.log("Received fields:", req.fields);
   try {
-    console.log("Received fields:", req.fields);
     const { content, tag, author } = req.fields;
     const imageFile = req.files;
     if (!content || !tag || !author || !imageFile) {
@@ -210,9 +221,6 @@ exports.addNewPost = async (req, res) => {
     if (currentUser.friends && currentUser.friends.length > 0) {
       await Promise.all(
         currentUser.friends.map(async (friendId) => {
-          // Log the friend ID being notified
-          console.log("Creating notification for friend ID:", friendId);
-
           // Create and save a new notification
           const notification = new Notification({
             userId: friendId,
@@ -318,10 +326,6 @@ exports.addComment = async (req, res) => {
 
 exports.search = async (req, res) => {
   const { query, filter } = req.query;
-  console.log(
-    `Received search request with query: ${query} and filter: ${filter}`
-  );
-
   try {
     let searchPromises = [];
     let searchResults = { users: [], pages: [], posts: [] };
@@ -329,7 +333,6 @@ exports.search = async (req, res) => {
     const searchPattern = new RegExp(query, "i"); // Create a regex pattern for the search query
 
     if (filter === "All" || filter === "People") {
-      console.log("Searching in Users...");
       searchPromises.push(
         User.find({
           $or: [
@@ -341,12 +344,10 @@ exports.search = async (req, res) => {
     }
 
     if (filter === "All" || filter === "Pages") {
-      console.log("Searching in Pages...");
       searchPromises.push(Page.find({ title: searchPattern }));
     }
 
     if (filter === "All" || filter === "Posts") {
-      console.log("Searching in Posts...");
       searchPromises.push(
         Posts.find({
           $or: [
@@ -370,7 +371,6 @@ exports.search = async (req, res) => {
         filter === "All" ? results[2] : results[filter === "Pages" ? 1 : 0];
     }
 
-    console.log("Combined search results:", searchResults);
     res.json(searchResults);
   } catch (error) {
     console.error("Error searching for content:", error);
@@ -380,15 +380,11 @@ exports.search = async (req, res) => {
 
 exports.profile = async (req, res) => {
   const userId = req.params.userId; // this is the string representation of MongoDB's ObjectId
-  console.log(`Fetching profile for userId: ${userId}`);
-
   try {
     // Assuming `userId` is the string representation of the ObjectId, use `_id` to fetch the details
     const userDetails = await User.findById(userId, "-password"); // Excludes the password field
-    console.log(`User details found:`, userDetails);
-
+  
     if (!userDetails) {
-      console.log(`User not found with _id: ${userId}`);
       return res.status(404).send("User not found");
     }
 
@@ -434,148 +430,144 @@ exports.handleShare = async (req, res) => {
     console.error("Error:", error);
     res.status(500).json({ error: "Internal server error" });
   }
-  };
+};
 
-  exports.addNewPoll = async (req, res) => {
-    console.log("Received request for addNewPoll"); 
-    try {
-      const userId = req.userId;
-      console.log("UserID from request:", userId);
-      // const { question, options } = req.fields;
-      const { question, options } = req.body;
-      console.log("Request body:", req.body);
-      // console.log("Request fields:", req.fields);
-        // Example: Create a new post document with image data
-        const newPoll = new Polls({
-          question: question,
-          options: options.map(option => ({ text: option, voters: [] })), // Adjusted according to provided structure
-          createdBy: userId,
-        });
-        // Save the new post
-        await newPoll.save();
-        console.log("New poll saved:", newPoll); // Log the newly created poll
-        // Find the current user
-      const currentUser = await Network.findOne({ userId: userId });
-  
-       // Check if the user exists
-       if (!currentUser) {
-        return res.status(404).json({ error: "User not found" });
-      }
-  
-      // Notify friends if they exist
-      if (currentUser.friends && currentUser.friends.length > 0) {
-        await Promise.all(currentUser.friends.map(async (friendId) => {
-          // Log the friend ID being notified
-          console.log("Creating notification for friend ID:", friendId);
-          
+exports.addNewPoll = async (req, res) => {
+  try {
+    const userId = req.userId;
+    // const { question, options } = req.fields;
+    const { question, options } = req.body;
+    const newPoll = new Polls({
+      question: question,
+      options: options.map((option) => ({ text: option, voters: [] })), // Adjusted according to provided structure
+      createdBy: userId,
+    });
+    // Save the new post
+    await newPoll.save();
+    // Find the current user
+    const currentUser = await Network.findOne({ userId: userId });
+
+    // Check if the user exists
+    if (!currentUser) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    // Notify friends if they exist
+    if (currentUser.friends && currentUser.friends.length > 0) {
+      await Promise.all(
+        currentUser.friends.map(async (friendId) => {
           // Create and save a new notification
           const notification = new Notification({
             userId: friendId,
             message: `Your friend ${userId} posted a poll.`,
             type: "Poll_Posted",
-            link: '', // Assuming the front end can handle this route to direct users to the new post
+            link: "", // Assuming the front end can handle this route to direct users to the new post
           });
           await notification.save();
-        }));
-      }
-  
-      // Return the created post data in the response
-      res.status(201).json(newPoll);
-    } catch (error) {
-      console.error('Error creating new poll:', error);
-      res.status(500).json({ error: 'Internal server error' });
-    }
-  };
-
-
-  exports.getPolls = async (req, res) => {
-    try {
-      // Assuming you want to fetch all polls or implement some logic to select specific ones
-      const polls = await Polls.find().sort({ createdAt: -1 });
-      res.json(polls);
-    } catch (error) {
-      console.error('Error fetching polls:', error);
-      res.status(500).json({ error: 'Internal server error' });
-    }
-  };
-
-
-  // exports.handleVote =async(req,res) => {
-  //   try{
-  //     const userId = req.userId;
-  //     const pollId=req.params.id;    
-  //     const { text } = req.body;
-  //     const updatedPost= await Posts.findByIdAndUpdate(pollId,{
-  //         $push:{options:{ text, voters:[{userId}] }}
-  //     }
-  //     ,{
-  //       new:true
-  //     });
-  //     if (!updatedPost) {
-  //       return res.status(404).json({ error: 'Post not found' });
-  //     }
-  
-  //     const notification = new Notification({
-  //       userId: updatedPost.userId, // Assuming `userId` is the post owner
-  //       message: `${user} voted on your poll.`,
-  //       type: "Poll_Voted",
-  //       link: '', // Assuming there's a route to view the post
-  //     });
-  //     await notification.save();
-  
-  //     // Send the updated post back as JSON response
-  //     res.status(201).json(updatedPost);
-  //   }
-  //   catch(error){
-  //     console.error('Error updating poll:', error);
-  //     res.status(500).json({ error: 'Internal server error' });
-  //   }
-  // };
-
-  exports.handleVote = async (req, res) => {
-    try {
-      const userId = req.userId; // Make sure this is being set correctly by your authentication middleware
-      const pollId = req.params.id;
-      const { text } = req.body; // Ensure this matches what's being sent by the client
-  
-      // First, find the poll to ensure it exists and get the option to update
-      const poll = await Polls.findById(pollId);
-      if (!poll) {
-        return res.status(404).json({ error: 'Poll not found' });
-      }
-  
-      // Find the index of the option to be updated
-      const optionIndex = poll.options.findIndex(option => option.text === text);
-      if (optionIndex === -1) {
-        return res.status(404).json({ error: 'Option not found' });
-      }
-  
-      // Update the voters array for the specific option
-      const updatedPoll = await Polls.findOneAndUpdate(
-        { _id: pollId, 'options.text': text },
-        { $push: { [`options.${optionIndex}.voters`]: userId } },
-        { new: true }
+        })
       );
-  
-      // You should have a user variable that contains the name of the user that voted
-      // If you don't have the user's name, you'll need to fetch it from the database or adjust your notification message
-      const user = "The user's name"; // Placeholder, replace with actual user name retrieval logic
-  
-      // Create the notification
-      const notification = new Notification({
-        userId: userId, // Assuming `userId` is the ID of the user who voted
-        message: `${user} voted on your poll.`,
-        type: "Poll_Voted",
-        link: '', // Provide a link to the poll if you have one
-      });
-      await notification.save();
-  
-      // Send the updated poll back as a JSON response
-      res.status(200).json(updatedPoll);
     }
-    catch(error){
-      console.error('Error updating poll:', error);
-      res.status(500).json({ error: 'Internal server error' });
+
+    // Return the created post data in the response
+    res.status(201).json(newPoll);
+  } catch (error) {
+    console.error("Error creating new poll:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+exports.getPolls = async (req, res) => {
+  try {
+    // Assuming you want to fetch all polls or implement some logic to select specific ones
+    const polls = await Polls.find().sort({ createdAt: -1 });
+    res.json(polls);
+  } catch (error) {
+    console.error("Error fetching polls:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+// exports.handleVote =async(req,res) => {
+//   try{
+//     const userId = req.userId;
+//     const pollId=req.params.id;
+//     const { text } = req.body;
+//     const updatedPost= await Posts.findByIdAndUpdate(pollId,{
+//         $push:{options:{ text, voters:[{userId}] }}
+//     }
+//     ,{
+//       new:true
+//     });
+//     if (!updatedPost) {
+//       return res.status(404).json({ error: 'Post not found' });
+//     }
+
+//     const notification = new Notification({
+//       userId: updatedPost.userId, // Assuming `userId` is the post owner
+//       message: `${user} voted on your poll.`,
+//       type: "Poll_Voted",
+//       link: '', // Assuming there's a route to view the post
+//     });
+//     await notification.save();
+
+//     // Send the updated post back as JSON response
+//     res.status(201).json(updatedPost);
+//   }
+//   catch(error){
+//     console.error('Error updating poll:', error);
+//     res.status(500).json({ error: 'Internal server error' });
+//   }
+// };
+
+exports.handleVote = async (req, res) => {
+  try {
+    const userId = req.userId; // Authentication middleware should set this
+    const pollId = req.params.id;
+    const { text } = req.body; // Text of the option being voted on
+
+    // Retrieve the poll to ensure it exists and get the option to update
+    const poll = await Polls.findById(pollId);
+    if (!poll) {
+      return res.status(404).json({ error: "Poll not found" });
     }
-  };
-  
+
+    // Check if the user has already voted in this poll
+    const hasVoted = poll.options.some(option => option.voters.includes(userId));
+    if (hasVoted) {
+      return res.status(403).json({ error: "You have already voted in this poll" });
+    }
+
+    // Find the index of the option to be updated
+    const optionIndex = poll.options.findIndex(option => option.text === text);
+    if (optionIndex === -1) {
+      return res.status(404).json({ error: "Option not found" });
+    }
+
+    // Update the voters array for the specific option
+    const updatedPoll = await Polls.findOneAndUpdate(
+      { _id: pollId, [`options.${optionIndex}.text`]: text },
+      { $push: { [`options.${optionIndex}.voters`]: userId } },
+      { new: true }
+    );
+
+    if (!updatedPoll) {
+      return res.status(404).json({ error: "Failed to update the poll" });
+    }
+    // Assuming you have a way to fetch the user's name from your user management system
+    const user = "The user's name"; // Placeholder, replace with actual user name retrieval logic
+
+    // Create and save the notification
+    const notification = new Notification({
+      userId: userId,
+      message: `${user} voted on your poll.`,
+      type: "Poll_Voted",
+      link: "", // Provide a link to the poll if you have one
+    });
+    await notification.save();
+    // Send the updated poll back as a JSON response
+    res.status(200).json(updatedPoll);
+  } catch (error) {
+    console.error("Error updating poll:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
