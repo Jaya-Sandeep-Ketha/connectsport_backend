@@ -1,3 +1,4 @@
+const jwt = require('jsonwebtoken');
 const User = require("../model/User");
 const Page = require("../model/page");
 const Posts = require("../model/Posts");
@@ -476,11 +477,35 @@ exports.addNewPoll = async (req, res) => {
   }
 };
 
+// exports.getPolls = async (req, res) => {
+//   try {
+//     // Assuming you want to fetch all polls or implement some logic to select specific ones
+//     const polls = await Polls.find().sort({ createdAt: -1 });
+//     res.json(polls);
+//   } catch (error) {
+//     console.error("Error fetching polls:", error);
+//     res.status(500).json({ error: "Internal server error" });
+//   }
+// };
+
 exports.getPolls = async (req, res) => {
   try {
-    // Assuming you want to fetch all polls or implement some logic to select specific ones
-    const polls = await Polls.find().sort({ createdAt: -1 });
-    res.json(polls);
+    // Decode the JWT token to get the userId
+    const token = req.headers.authorization.split(' ')[1]; // Assumes Bearer token format
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const userId = decoded.userId;
+
+    const userNetwork = await Network.findOne({ userId: userId });
+    if (!userNetwork || userNetwork.friends.length === 0) {
+      return res.status(200).json([]);
+    }
+
+    const friendsPollsPromises = userNetwork.friends.map(friendId =>
+      Polls.find({ createdBy: friendId }).sort({ createdAt: -1 })
+    );
+
+    const friendsPollsResults = await Promise.all(friendsPollsPromises);
+    res.json(friendsPollsResults.flat());
   } catch (error) {
     console.error("Error fetching polls:", error);
     res.status(500).json({ error: "Internal server error" });
