@@ -596,3 +596,94 @@ exports.handleVote = async (req, res) => {
     res.status(500).json({ error: "Internal server error" });
   }
 };
+
+// Endpoint to fetch polls created by the current user
+exports.fetchPolls = async (req, res) => {
+  try {
+      const polls = await Polls.find({ createdBy: req.params.userId });
+      res.json(polls);
+  } catch (error) {
+      console.error('Failed to fetch user polls:', error);
+      res.status(500).json({ message: 'Failed to fetch user polls' });
+  }
+};
+
+// Endpoint to download poll results
+// exports.downloadPolls = async (req, res) => {
+//   try {
+//       const poll = await Polls.findById(req.params.pollId);
+//       if (!poll) {
+//           return res.status(404).json({ message: 'Poll not found' });
+//       }
+
+//       // Generate CSV or any other format for download
+//       const csvData = generateCSV(poll);
+//       res.setHeader('Content-Type', 'text/csv');
+//       res.setHeader('Content-Disposition', `attachment; filename="poll-${poll.question}-results.csv"`);
+//       res.send(csvData);
+//   } catch (error) {
+//       console.error('Error downloading poll results:', error);
+//       res.status(500).json({ message: 'Error downloading poll results' });
+//   }
+// };
+
+// function generateCSV(poll) {
+//   // Check for poll validity
+//   if (!poll || !poll.options) {
+//     throw new Error('Invalid poll data');
+//   }
+  
+//   const headers = 'Option,Count\n';
+//   const rows = poll.options.map(opt => {
+//     const text = `"${opt.text.replace(/"/g, '""')}"`; // Escape double quotes and wrap text in double quotes
+//     const voteCount = opt.voters.length; // Count the number of voters for each option
+//     return `${text},${voteCount}`;
+//   }).join('\n');
+  
+//   return headers + rows;
+// }
+
+exports.downloadPolls = async (req, res) => {
+  try {
+    const poll = await Polls.findById(req.params.pollId);
+    if (!poll) {
+        return res.status(404).json({ message: 'Poll not found' });
+    }
+
+    // Generate CSV data
+    const csvData = generateCSV(poll);
+    
+    // Sanitize the poll question to remove characters that are not allowed in filenames
+    const filename = sanitizeFilename(poll.question);
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}-results.csv"`);
+    res.send(csvData);
+  } catch (error) {
+    console.error('Error downloading poll results:', error);
+    res.status(500).json({ message: 'Error downloading poll results' });
+  }
+};
+
+function sanitizeFilename(text) {
+  return text.replace(/[^a-z0-9]/gi, '_').toLowerCase(); // Replace non-alphanumeric characters with underscores
+}
+
+function generateCSV(poll) {
+  // Check for poll validity
+  if (!poll || !poll.options) {
+    throw new Error('Invalid poll data');
+  }
+  
+  // Escape the question for CSV and use it as a header
+  const escapedQuestion = `"${poll.question.replace(/"/g, '""')}"`;
+  const headers = `Poll Question: ${escapedQuestion}\nOption,Count\n`;
+  
+  const rows = poll.options.map(opt => {
+    const text = `"${opt.text.replace(/"/g, '""')}"`; // Escape double quotes in option text
+    const voteCount = opt.voters.length; // Count the number of voters for each option
+    return `${text},${voteCount}`;
+  }).join('\n');
+  
+  return headers + rows;
+}

@@ -1,7 +1,7 @@
 const express = require("express");
 const homepageRouter = express.Router();
 const authenticateToken= require('../middleware/auth');
-const {home, addNewPost, handleLike, addComment, handleShare, search, profile,addNewPoll, getPolls, handleVote}=require('../controllers/homecontroller');
+const {home, addNewPost, handleLike, addComment, handleShare, search, profile,addNewPoll, getPolls, handleVote, fetchPolls, downloadPolls}=require('../controllers/homecontroller');
 const expressFormidable =require("express-formidable");
 
 homepageRouter.get('/posts', authenticateToken, home);
@@ -15,5 +15,9 @@ homepageRouter.post('/newpoll',authenticateToken, addNewPoll);
 homepageRouter.get('/polls', getPolls);
 // homepageRouter.put('/:user/polls/:id/vote', authenticateToken, handleVote);
 homepageRouter.put('/polls/:id/vote', authenticateToken, handleVote);
+homepageRouter.get('/user/:userId/polls', fetchPolls);
+homepageRouter.get('/polls/:pollId/download', downloadPolls);
+
+
 
 module.exports = homepageRouter;
