@@ -114,7 +114,7 @@ exports.sharePage = async (req, res) => {
   const { userId, pageId } = req.body;
   console.log("Request to share page received", { userId, pageId }); // Log incoming request data
 
-  const baseURL = process.env.FRONTEND_APP_URL || 'https://yourapp.com'; 
+  const baseURL = process.env.FRONTEND_APP_URL || 'https://connectsportteam17.netlify.app'; 
   const pageUrl = `${baseURL}/pages/${pageId}`;
   console.log("Constructed page URL:", pageUrl); // Log the constructed URL
 
